@@ -1,10 +1,10 @@
 const empires = [
-  { id: 'british', name: 'British Empire', region: 'The Isles', color: '#a94b38', sigil: 'L', trait: 'Redoubtable Guard', spellPrefix: 'Crown', units: ['Crown Squire', 'Longbow Scout', 'Tower Guard', 'Whitecliff Knight', 'Border Rider', 'Royal Archer', 'Stonekeep Warden', 'Lionheart', 'Red Banner Captain', 'Crown Champion'] },
-  { id: 'mongol', name: 'Mongol Empire', region: 'The Steppe', color: '#aa7933', sigil: 'ᛟ', trait: 'Riders of the Steppe', spellPrefix: 'Steppe', units: ['Steppe Foal', 'Wind Scout', 'Keshig Guard', 'Wolf-Rider', 'Falcon Archer', 'Khanate Lancer', 'Golden Horde', 'Ordu Champion', 'Eagle Standard', 'Great Khan'] },
-  { id: 'russian', name: 'Russian Empire', region: 'The North', color: '#536d52', sigil: '✥', trait: 'Keepers of the North', spellPrefix: 'Winter', units: ['Snowland Squire', 'Pinewood Scout', 'Ironwall Guard', 'Winter Knight', 'Cossack Rider', 'Frost Archer', 'Bearskin Warden', 'White Tsar', 'North Banner Captain', 'Rus Champion'] },
-  { id: 'qing', name: 'Qing Dynasty', region: 'The East', color: '#398078', sigil: '龍', trait: 'Jade Court', spellPrefix: 'Jade', units: ['Jade Page', 'Cloud Scout', 'Dragon Guard', 'Bannerman Knight', 'Swift Lancer', 'Silk Archer', 'Jadewall Sentinel', 'Azure General', 'Imperial Standard', 'Dragon Emperor'] },
-  { id: 'spanish', name: 'Spanish Empire', region: 'The West', color: '#b28a37', sigil: '☼', trait: 'Gilded Armada', spellPrefix: 'Gilded', units: ['Castilian Page', 'Sierra Scout', 'Sunlit Guard', 'Toledo Knight', 'Conquistador', 'Crossbow Archer', 'Citadel Warden', 'Golden Hidalgo', 'Royal Standard', 'Sun King Champion'] },
-  { id: 'french', name: 'French Colonial', region: 'The New World', color: '#526982', sigil: '⚜', trait: 'Frontier Company', spellPrefix: 'Frontier', units: ['Frontier Page', 'River Scout', 'Fleur Guard', 'Loyalist Knight', 'Voyageur Rider', 'Forest Archer', 'Stonefort Warden', 'Marquis Champion', 'Tricolor Captain', 'Royal Expeditioner'] },
+  { id: 'british', name: 'British Empire', region: 'The Isles', color: '#a94b38', sigil: 'L', trait: 'Redoubtable Guard', spellPrefix: 'Crown', units: ['Crown Squire', 'Longbow Scout', 'Tower Guard', 'Whitecliff Knight', 'Border Rider', 'Royal Archer', 'Stonekeep Warden', 'Royal Lion', 'Red Stag Guardian', 'Crown Champion'] },
+  { id: 'mongol', name: 'Mongol Empire', region: 'The Steppe', color: '#aa7933', sigil: 'ᛟ', trait: 'Riders of the Steppe', spellPrefix: 'Steppe', units: ['Steppe Foal', 'Wind Scout', 'Keshig Guard', 'Wolf-Rider', 'Falcon Archer', 'Khanate Lancer', 'Golden Horde', 'Ordu Champion', 'Steppe Wolf', 'Golden Eagle'] },
+  { id: 'russian', name: 'Russian Empire', region: 'The North', color: '#536d52', sigil: '✥', trait: 'Keepers of the North', spellPrefix: 'Winter', units: ['Snowland Squire', 'Pinewood Scout', 'Ironwall Guard', 'Winter Knight', 'Cossack Rider', 'Frost Archer', 'Bearskin Warden', 'White Tsar', 'Brown Bear Guardian', 'White Wolf'] },
+  { id: 'qing', name: 'Qing Dynasty', region: 'The East', color: '#398078', sigil: '龍', trait: 'Jade Court', spellPrefix: 'Jade', units: ['Jade Page', 'Cloud Scout', 'Jade Dragon', 'Bannerman Knight', 'Swift Lancer', 'Silk Archer', 'Jadewall Sentinel', 'Azure General', 'Qing Lion', 'Dragon Emperor'] },
+  { id: 'spanish', name: 'Spanish Empire', region: 'The West', color: '#b28a37', sigil: '☼', trait: 'Gilded Armada', spellPrefix: 'Gilded', units: ['Castilian Page', 'Sierra Scout', 'Sunlit Guard', 'Toledo Knight', 'Conquistador', 'Crossbow Archer', 'Citadel Warden', 'Golden Hidalgo', 'Iberian Lynx', 'Sun King Champion'] },
+  { id: 'french', name: 'French Colonial', region: 'The New World', color: '#526982', sigil: '⚜', trait: 'Frontier Company', spellPrefix: 'Frontier', units: ['Frontier Page', 'River Scout', 'Fleur Guard', 'Loyalist Knight', 'Voyageur Rider', 'Forest Archer', 'Stonefort Warden', 'Marquis Champion', 'Frontier Bison', 'Great Horned Owl'] },
 ];
 
 const ranks = ['Initiate', 'Vanguard', 'Veteran', 'Sentinel', 'Captain', 'Exemplar'];
@@ -26,6 +26,34 @@ function makeCard(empire, details, serial) {
   return { ...details, cost, name: `${code}-${String(serial).padStart(3, '0')} ${details.name}`, empire, instanceId: `${empire.id}-${details.id}` };
 }
 
+function getUnitLoadout(unit, empire, tier) {
+  const name = unit.toLowerCase();
+  const bestiary = {
+    'royal lion': 'lion', 'red stag guardian': 'stag',
+    'steppe wolf': 'wolf', 'golden eagle': 'eagle',
+    'brown bear guardian': 'bear', 'white wolf': 'wolf',
+    'jade dragon': 'dragon', 'qing lion': 'lion',
+    'iberian lynx': 'lynx', 'frontier bison': 'bison',
+    'great horned owl': 'owl',
+  };
+  const species = bestiary[name];
+  const mounted = !species && /rider|foal|horde|khan|lancer|cossack|voyageur/.test(name);
+  const weapon = species ? 'claws'
+    : /archer|scout|longbow|crossbow|bow/.test(name) ? 'bow'
+      : /elephant|bearskin/.test(name) ? 'axe'
+        : mounted ? 'lance'
+          : /guard|warden|sentinel/.test(name) ? 'sword-shield'
+            : /champion|general|captain|emperor|king|tsar|hidalgo/.test(name) ? 'greatsword' : 'sword';
+  const weaponName = { bow: 'Longbow', axe: 'Battle axe', lance: 'War lance', 'sword-shield': 'Sword & shield', greatsword: 'Greatsword', sword: 'Arming sword', claws: 'Claws & fangs' }[weapon];
+  const armor = species ? 'natural hide' : tier >= 4 ? 'plate armor' : tier >= 2 ? 'chain mail' : 'leather armor';
+  const royal = /crown|royal|king|tsar|emperor|khan|marquis|champion/.test(name);
+  const headwear = species ? 'distinctive crest' : royal ? 'crown and helm' : {
+    british: 'nasal helm', mongol: 'fur-lined cap', russian: 'fur helm', qing: 'plumed helmet', spanish: 'morion helmet', french: 'plumed bascinet',
+  }[empire.id];
+  const feature = species ? `${species} form` : mounted ? 'warhorse and lance' : weapon === 'bow' ? 'quiver and bow' : armor;
+  return { weapon, weaponName, mounted, species, armor, headwear, feature };
+}
+
 function buildEmpireDeck(empire) {
   const deck = [];
   const creatureRanks = [0, 2, 4];
@@ -38,10 +66,12 @@ function buildEmpireDeck(empire) {
       const defense = tier >= 4 ? 1 : 0;
       const cost = makeCost(0, 0, 0);
       cost[resourceNames[unitIndex % resourceNames.length]] = tier + 1;
+      const loadout = getUnitLoadout(unit, empire, tier);
       deck.push(makeCard(empire, {
         id: `unit-${unitIndex}-${rankIndex}`,
         name: `${rank} ${unit}`,
         kind: 'Creature', cost, attack, health, defense,
+        ...loadout,
         glyph: ['♞', '➶', '⬟', '♜', '✦', '⚔'][unitIndex % 6],
         text: defense ? 'A veteran with armor to hold the line.' : 'A loyal hand in service of the banner.',
       }, deck.length + 1));
@@ -85,8 +115,14 @@ function spellDescription(effect, amount) {
 }
 
 const $ = (selector) => document.querySelector(selector);
-const screens = { intro: $('#intro-screen'), battle: $('#battle-screen') };
-const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, player: null, enemy: null };
+const screens = { intro: $('#intro-screen'), difficulty: $('#difficulty-screen'), battle: $('#battle-screen') };
+const difficulties = [
+  { id: 'easy-living', name: 'Easy Living', enemyHealth: 22, enemySupplies: 1, aiTargetChance: .2, color: '#668357', summary: 'Rivals begin with 22 health and 1 of each supply.' },
+  { id: 'farm-work', name: 'Farm Work', enemyHealth: 30, enemySupplies: 2, aiTargetChance: .4, color: '#aa7933', summary: 'Rivals begin with 30 health and 2 of each supply.' },
+  { id: 'painful-adventure', name: 'Painful Adventure', enemyHealth: 36, enemySupplies: 3, aiTargetChance: .65, color: '#bd6840', summary: 'Rivals begin with 36 health and 3 of each supply.' },
+  { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, enemySupplies: 4, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and 4 of each supply.' },
+];
+const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null };
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 let audioContext;
 
@@ -135,7 +171,7 @@ function arenaSlot(owner, creature) {
   return { x: arena.canvas.clientWidth * ((index + 1) / (count + 1)), y: owner.isAI ? 42 : arena.canvas.clientHeight - 42 };
 }
 
-function drawWarrior(creature, x, y, time, direction, action = '') {
+function drawWarrior(creature, x, y, time, direction, action = '', progress = 0) {
   const context = arena.context;
   const color = creature.empire.color;
   const scale = Math.max(3, Math.min(5, arena.canvas.clientWidth / 170));
@@ -157,13 +193,60 @@ function drawWarrior(creature, x, y, time, direction, action = '') {
   const metal = '#ded7bd';
   const gold = '#f0bd4d';
   const skin = '#e99b68';
-  pixel(3, 1, 4, 1, gold);
-  pixel(2, 2, 6, 2, color);
+  if (creature.species) {
+    const beasts = {
+      lion: ['....GGGG....', '..GGGGGGGG..', '.GGCCCCCCGG.', '.GCCCCCCCCG.', '..CCCCCCCC..', '..CCCDCCCCC.', '.CCCCC.CCC..', '..CCC...CC..', '.CC.C...C.C.'],
+      stag: ['.....DD.....', '...D.DD.D...', '....GGGG....', '...GCCCCG...', '..GCCCCCCG..', '..CCCCCCCC..', '..CCC.DCCC..', '...CC..CC...', '..CC....CC..'],
+      wolf: ['..D........D.', '.DDD......DDD', '.DCCCCCCCCDD.', '..CCCCCCCCCC.', '..CCCDCCCCCC.', '..CCCCCCCCCC.', '...CCCCCCC...', '...CC...CC....'],
+      eagle: ['......DD......', '.....DGGD.....', '....DDGGDD....', '..DDDDGGDDDD..', '.DCCCCGGCCCCD.', '..CCCCGGCCCC..', '.....DGGD.....', '....DD..DD....'],
+      bear: ['....DDDDDD....', '..DDCCCCCCDD..', '.DCCCCCCCCCCD.', '.DCCCDCCCDCCCD.', '..CCCCCCCCCC..', '..CCCDCCCCCC..', '.CCCCCCCCCCCC.', '..CCC....CCC..'],
+      dragon: ['....DD..DD....', '..DDCCCCCCDD..', '.DCCCCGGCCCCD.', '..CCCCCCCCCC..', '...CCCDCCCC...', '..CCCCC.CCCC..', '.DD...C..C...DD', '......DDDD....'],
+      lynx: ['..D........D..', '.DDD......DDD.', '.DCCCCCCCCCCCD.', '..CCCCCCCCCC...', '..CCCDCCCCCC...', '..CCCCCCCCCCC..', '...CCCCCCCC....', '...CC....CC.....'],
+      bison: ['....DDDDDD....', '..DDCCCCCCDD..', '.DCCCCCCCCCCD.', '.DCCCDCCCCCCD.', '..CCCCCCCCCC..', '..CCCCCCCCCC..', '...CCCCC.CCC...', '..CC....CC......'],
+      owl: ['.....DDDD.....', '....DGGGGD....', '...DCCCCCCD...', '..DCCCDCCCDCC..', '..DCCGGGGCCCD..', '...DCCCCCCD....', '....CCCCCC.....', '...CC....CC....'],
+    };
+    const pattern = beasts[creature.species] || beasts.wolf;
+    const colors = { D: dark, C: color, G: gold };
+    pattern.forEach((row, rowIndex) => [...row].forEach((mark, column) => {
+      if (colors[mark]) pixel(column - 3, rowIndex + 3, 1, 1, colors[mark]);
+    }));
+    pixel(4, 7, 1, 1, skin);
+    if (action === 'attack') {
+      const clawX = 8 + Math.round(progress * 2);
+      pixel(clawX, 7, 2, 1, '#fff3a9');
+      pixel(clawX + 1, 6, 1, 1, metal);
+    }
+    if (action === 'hit') {
+      context.globalCompositeOperation = 'screen';
+      context.fillStyle = '#fff3a9aa';
+      context.fillRect(-scale * 5, -scale * 11, scale * 11, scale * 14);
+    }
+    context.restore();
+    return;
+  }
+  if (creature.mounted) {
+    pixel(-4, 10, 8, 3, dark);
+    pixel(-2, 8, 7, 3, color);
+    pixel(3, 7, 3, 2, dark);
+    pixel(-2, 12, 1, 2, dark);
+    pixel(3, 12, 1, 2, dark);
+    pixel(5, 7, 1, 1, gold);
+  }
+  const armorColor = creature.armor === 'plate armor' ? '#bdc9ca' : creature.armor === 'chain mail' ? '#82939a' : color;
+  if (creature.headwear === 'crown and helm') {
+    pixel(2, 1, 1, 2, gold); pixel(4, 0, 1, 3, gold); pixel(6, 1, 1, 2, gold);
+  } else if (creature.headwear?.includes('fur')) {
+    pixel(2, 1, 6, 2, '#e7dfc5'); pixel(3, 0, 4, 1, color);
+  } else if (creature.headwear?.includes('plumed')) {
+    pixel(4, 0, 2, 3, '#e5d5a7'); pixel(2, 2, 6, 1, gold);
+  } else {
+    pixel(3, 1, 4, 1, gold); pixel(2, 2, 6, 2, color);
+  }
   pixel(3, 4, 4, 2, skin);
   pixel(2, 4, 1, 1, dark);
   pixel(7, 4, 1, 1, dark);
   pixel(2, 6, 6, 1, gold);
-  pixel(1, 7, 8, 3, color);
+  pixel(1, 7, 8, 3, armorColor);
   pixel(2, 7, 6, 1, metal);
   pixel(3, 10, 2, 2, dark);
   pixel(6, 10, 2, 2, dark);
@@ -172,15 +255,32 @@ function drawWarrior(creature, x, y, time, direction, action = '') {
   pixel(0, 8, 1, 2, metal);
   pixel(0, 7, 2, 1, gold);
 
-  if (action === 'attack') {
-    pixel(7, 7, 4, 1, metal);
-    pixel(10, 6, 1, 1, gold);
-    pixel(11, 5, 1, 1, metal);
-    pixel(12, 4, 2, 1, metal);
+  const swing = action === 'attack' ? Math.sin(Math.PI * Math.min(1, Math.max(0, (progress - .58) / .2))) : 0;
+  const weaponY = Math.round(6 - swing * 3 + (action === 'idle' ? step / scale : 0));
+  if (creature.weapon === 'bow') {
+    pixel(9, 4, 1, 1, gold); pixel(10, 5, 1, 3, metal); pixel(9, 8, 1, 1, gold);
+    pixel(8, 5, 1, 1, metal); pixel(8, 7, 1, 1, metal);
+    if (action === 'attack') {
+      const arrowX = 10 + Math.round(progress * 7);
+      pixel(arrowX, 6, 3, 1, gold); pixel(arrowX + 2, 5, 1, 1, metal); pixel(arrowX + 2, 7, 1, 1, metal);
+    }
+  } else if (creature.weapon === 'axe') {
+    pixel(8, 7, 1, 5, '#8b6041'); pixel(9, 5, 3, 2, metal); pixel(11, 6, 1, 2, gold);
+    if (action === 'attack') { pixel(10, weaponY, 3, 2, metal); pixel(12, weaponY - 1, 1, 3, gold); }
+  } else if (creature.weapon === 'lance') {
+    pixel(7, 7, 6, 1, '#8b6041'); pixel(12, 6, 2, 1, metal); pixel(14, 5, 2, 1, gold);
+    if (action === 'attack') { pixel(9, weaponY, 5, 1, metal); pixel(14, weaponY - 1, 2, 1, gold); }
+  } else if (creature.weapon === 'sword-shield') {
+    pixel(8, 7, 1, 4, '#8b6041'); pixel(9, 5, 1, 2, gold); pixel(7, 4, 3, 1, metal);
+    pixel(-2, 7, 2, 3, color); pixel(-2, 8, 2, 1, gold);
+    if (action === 'attack') { pixel(9, weaponY, 1, 5, metal); pixel(8, weaponY, 3, 1, gold); }
   } else {
-    pixel(8, 7 + Math.round(step / scale), 1, 3, metal);
-    pixel(9, 6 + Math.round(step / scale), 2, 1, gold);
-    pixel(10, 5 + Math.round(step / scale), 1, 1, metal);
+    pixel(8, 8, 1, 4, '#8b6041');
+    pixel(9, weaponY + 2, 1, 2, gold);
+    pixel(10, weaponY, 1, 3, metal);
+    pixel(11, weaponY - 1, 1, 1, metal);
+    pixel(10, weaponY - 2, creature.weapon === 'greatsword' ? 2 : 1, 1, gold);
+    if (action === 'attack') { pixel(10, weaponY - 2, 2, 1, '#fff3a9'); pixel(12, weaponY, 2, 1, metal); }
   }
   if (action === 'hit') {
     context.globalCompositeOperation = 'screen';
@@ -228,6 +328,7 @@ function drawBattlefield(time) {
   const combat = arena.combat;
   let attackerPosition = null;
   let targetPosition = null;
+  let combatProgress = 0;
   if (combat) {
     const owner = combat.owner;
     const rival = owner.isAI ? state.player : state.enemy;
@@ -237,8 +338,8 @@ function drawBattlefield(time) {
       targetPosition = combat.targetId
         ? arenaSlot(rival, rival.board.find((item) => item.instanceId === combat.targetId) || { instanceId: combat.targetId })
         : { x: bounds.width / 2, y: owner.isAI ? bounds.height - 36 : 36 };
-      const progress = Math.min(1, Math.max(0, (time - combat.startedAt) / combat.duration));
-      const travel = progress < .62 ? progress / .62 : (1 - progress) / .38;
+      combatProgress = Math.min(1, Math.max(0, (time - combat.startedAt) / combat.duration));
+      const travel = combatProgress < .62 ? combatProgress / .62 : (1 - combatProgress) / .38;
       attackerPosition = {
         x: attackerPosition.x + (targetPosition.x - attackerPosition.x) * travel,
         y: attackerPosition.y + (targetPosition.y - attackerPosition.y) * travel,
@@ -250,7 +351,7 @@ function drawBattlefield(time) {
     if (!owner?.board) continue;
     owner.board.forEach((creature) => {
       if (combat?.attackerId === creature.instanceId && attackerPosition) {
-        drawWarrior(creature, attackerPosition.x, attackerPosition.y, time, owner.isAI ? -1 : 1, 'attack');
+        drawWarrior(creature, attackerPosition.x, attackerPosition.y, time, owner.isAI ? -1 : 1, 'attack', combatProgress);
         return;
       }
       if (combat?.targetId === creature.instanceId) {
@@ -282,27 +383,49 @@ function shuffle(items) {
   return items;
 }
 
-function createPlayer(empire, isAI) {
-  return { empire, isAI, health: 30, maxHealth: 30, resources: makeCost(2, 2, 2), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0 };
+function createPlayer(empire, isAI, difficulty) {
+  const health = isAI ? difficulty.enemyHealth : 30;
+  const supplies = isAI ? difficulty.enemySupplies : 2;
+  return { empire, isAI, health, maxHealth: health, resources: makeCost(supplies, supplies, supplies), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0 };
 }
 
 function startGame(empireId) {
-  const playerEmpire = empires.find((empire) => empire.id === empireId);
-  const rivals = empires.filter((empire) => empire.id !== empireId);
-  const enemyEmpire = rivals[Math.floor(Math.random() * rivals.length)];
+  state.selectedEmpire = empires.find((empire) => empire.id === empireId);
+  $('#chosen-empire-label').textContent = `${state.selectedEmpire.name} · ${state.selectedEmpire.region}`;
+  $('#chosen-empire-label').style.color = state.selectedEmpire.color;
+  $('#difficulty-screen').style.setProperty('--faction', state.selectedEmpire.color);
+  screens.intro.hidden = true;
+  screens.difficulty.hidden = false;
+}
+
+function chooseDifficulty(difficultyId) {
+  const difficulty = difficulties.find((option) => option.id === difficultyId);
+  state.campaign = {
+    playerEmpire: state.selectedEmpire,
+    difficulty,
+    opponents: shuffle(empires.filter((empire) => empire.id !== state.selectedEmpire.id)),
+    opponentIndex: 0,
+    lastVictory: false,
+  };
+  startCampaignBattle();
+}
+
+function startCampaignBattle() {
+  const campaign = state.campaign;
+  if (!campaign) return;
   Object.assign(state, { started: true, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false });
-  state.player = createPlayer(playerEmpire, false);
-  state.enemy = createPlayer(enemyEmpire, true);
+  state.player = createPlayer(campaign.playerEmpire, false, campaign.difficulty);
+  state.enemy = createPlayer(campaign.opponents[campaign.opponentIndex], true, campaign.difficulty);
   drawUntilHandSize(state.player);
   drawUntilHandSize(state.enemy);
-  screens.intro.hidden = true;
+  screens.difficulty.hidden = true;
   screens.battle.hidden = false;
   startBattlefieldAnimation();
-  playSound('start');
   if ($('#result-dialog').open) $('#result-dialog').close();
   updateHeader();
   refresh();
   beginTurn(state.player);
+  if (campaign.opponentIndex === 0) playSound('start');
 }
 
 function drawCard(owner) {
@@ -339,7 +462,7 @@ function beginTurn(owner) {
   playSound('turn');
   drawUntilHandSize(owner);
   state.selectedAttacker = null;
-  $('#round-label').textContent = `ROUND ${roman(state.round)}`;
+  $('#round-label').textContent = `EMPIRE ${state.campaign.opponentIndex + 1}/5 · ${roman(state.round)}`;
   notify(owner.isAI ? `${owner.empire.name} is taking its turn` : 'Your move, commander');
   refresh();
   if (owner.isAI) window.setTimeout(runAiTurn, 650);
@@ -416,17 +539,47 @@ function makePixelArt(card, compact = false) {
     [...row].forEach((pixel, x) => { if (pixel !== '.') rect(x + Math.floor((width - row.length) / 2), y + offsetY, colors[pixel]); });
   });
   const type = card.kind === 'Resource' ? 'harvest' : card.kind === 'Spell' ? card.effect : 'creature';
-  if (card.kind === 'Creature') {
+  if (card.kind === 'Creature' && card.species) {
+    const beasts = {
+      lion: ['....GGGG....', '..GGGGGGGG..', '.GGCCCCCCGG.', '.GCCCCCCCCG.', '..CCCCCCCC..', '..CCCDCCCCC.', '.CCCCC.CCC..', '..CCC...CC..', '.CC.C...C.C.'],
+      stag: ['.....DD.....', '...D.DD.D...', '....GGGG....', '...GCCCCG...', '..GCCCCCCG..', '..CCCCCCCC..', '..CCC.DCCC..', '...CC..CC...', '..CC....CC..'],
+      wolf: ['..D........D.', '.DDD......DDD', '.DCCCCCCCCDD.', '..CCCCCCCCCC.', '..CCCDCCCCCC.', '..CCCCCCCCCC.', '...CCCCCCC...', '...CC...CC....'],
+      eagle: ['......DD......', '.....DGGD.....', '....DDGGDD....', '..DDDDGGDDDD..', '.DCCCCGGCCCCD.', '..CCCCGGCCCC..', '.....DGGD.....', '....DD..DD....'],
+      bear: ['....DDDDDD....', '..DDCCCCCCDD..', '.DCCCCCCCCCCD.', '.DCCCDCCCDCCCD.', '..CCCCCCCCCC..', '..CCCDCCCCCC..', '.CCCCCCCCCCCC.', '..CCC....CCC..'],
+      dragon: ['....DD..DD....', '..DDCCCCCCDD..', '.DCCCCGGCCCCD.', '..CCCCCCCCCC..', '...CCCDCCCC...', '..CCCCC.CCCC..', '.DD...C..C...DD', '......DDDD....'],
+      lynx: ['..D........D..', '.DDD......DDD.', '.DCCCCCCCCCCCD.', '..CCCCCCCCCC...', '..CCCDCCCCCC...', '..CCCCCCCCCCC..', '...CCCCCCCC....', '...CC....CC.....'],
+      bison: ['....DDDDDD....', '..DDCCCCCCDD..', '.DCCCCCCCCCCD.', '.DCCCDCCCCCCD.', '..CCCCCCCCCC..', '..CCCCCCCCCC..', '...CCCCC.CCC...', '..CC....CC......'],
+      owl: ['.....DDDD.....', '....DGGGGD....', '...DCCCCCCD...', '..DCCCDCCCDCC..', '..DCCGGGGCCCD..', '...DCCCCCCD....', '....CCCCCC.....', '...CC....CC....'],
+    };
+    drawRows(beasts[card.species] || beasts.wolf, { D: shadow, C: sky, G: gold }, 2);
+    rect(10, 7, light);
+    if (card.species === 'stag') { rect(4, 1, gold); rect(10, 1, gold); }
+    if (card.species === 'eagle' || card.species === 'owl') rect(7, 6, '#e99b36', 2, 1);
+  } else if (card.kind === 'Creature') {
     const name = card.name.toLowerCase();
     const horse = /rider|foal|horde|elephant|khan/.test(name);
-    const archer = /archer|scout|bow/.test(name);
+    const archer = card.weapon === 'bow' || /archer|scout|bow/.test(name);
+    const armorTone = card.armor === 'plate armor' ? '#bdc9ca' : card.armor === 'chain mail' ? '#82939a' : sky;
     if (horse) {
       drawRows(['......DD....', '.....DGGD...', '.....DDDD...', '..DDDDDDDDD.', '.DDAAAAAAAAD', 'DDAAAAAADDDD', '.DDAAAADDD...', '..DDD.DD.....', '..DD..D.D....', '.DDD..DDD....'], { D: shadow, A: gold, G: light });
     } else {
-      drawRows(['.....DDDD....', '....DGGGGD...', '....DGSSGD...', '.....DDDD....', '..DDDDDDDD...', '.DDAAAAAADD..', '.DAAMAAAAD...', '..DAAAAAAD...', '...DD..DD....', '...DD..DD....', '..DDD..DDD...', '..DDD..DDD...'], { D: shadow, A: sky, G: gold, S: light, M: archer ? '#f7e16b' : green });
+      drawRows(['.....DDDD....', '....DGGGGD...', '....DGSSGD...', '.....DDDD....', '..DDDDDDDD...', '.DDAAAAAADD..', '.DAAMAAAAD...', '..DAAAAAAD...', '...DD..DD....', '...DD..DD....', '..DDD..DDD...', '..DDD..DDD...'], { D: shadow, A: armorTone, G: gold, S: light, M: archer ? '#f7e16b' : green });
     }
-    if (archer) {
+    if (card.headwear === 'crown and helm') {
+      rect(6, 0, gold); rect(8, 0, gold); rect(5, 1, gold, 5, 1);
+    } else if (card.headwear?.includes('fur')) {
+      rect(5, 1, light, 5, 1); rect(6, 0, sky, 3, 1);
+    } else if (card.headwear?.includes('plumed')) {
+      rect(7, 0, '#e65d48', 2, 2); rect(5, 2, gold, 5, 1);
+    }
+    if (card.weapon === 'bow') {
       rect(12, 2, gold); rect(11, 3, gold); rect(10, 4, gold); rect(9, 5, gold);
+    } else if (card.weapon === 'lance') {
+      rect(11, 4, '#8c6040', 1, 5); rect(12, 3, light, 1, 1); rect(12, 2, gold, 1, 1);
+    } else if (card.weapon === 'axe') {
+      rect(12, 5, '#8c6040', 1, 4); rect(11, 3, light, 3, 2); rect(13, 4, gold);
+    } else if (card.weapon === 'sword-shield') {
+      rect(12, 4, '#8c6040', 1, 4); rect(11, 3, light, 3, 1); rect(4, 7, sky, 2, 2);
     } else {
       rect(11, 5, light, 1, 3); rect(12, 4, gold); rect(12, 8, gold);
     }
@@ -464,12 +617,12 @@ function makeHandCard(card) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `hand-card${card.kind === 'Spell' ? ' spell-card' : ''}`;
-  button.draggable = card.kind === 'Creature';
+  button.draggable = card.kind === 'Creature' && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
   button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5 && card.kind === 'Creature';
   button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : ''}`);
   button.innerHTML = `<span class="hand-card-top"><span class="hand-symbol">${card.glyph}</span><span class="choice-number">${card.empire.sigil}</span></span>`;
-  button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.kind}</span><span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : ''}`));
+  button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.kind}</span>${card.weaponName ? `<span class="hand-weapon">⚔ ${card.weaponName}${card.mounted ? ' · Mounted' : ''}</span><span class="hand-feature">${card.species ? `${card.species} · ${card.armor}` : `${card.armor} · ${card.headwear}`}</span>` : ''}<span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : ''}`));
   button.addEventListener('dragstart', (event) => {
     if (card.kind !== 'Creature' || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5) {
       event.preventDefault();
@@ -491,7 +644,7 @@ function makeBoardCard(creature, owner) {
   const attack = creature.attack + (creature.bonusAttack || 0);
   button.setAttribute('aria-label', `${creature.name}: attack ${attack}, health ${creature.health}, defense ${creature.defense}${creature.canAttack ? ', ready to attack' : ', cannot attack yet'}`);
   button.innerHTML = `<span class="board-top"><span class="card-sigil">${creature.glyph}</span></span>`;
-  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-type">${creature.empire.trait}</span><span class="board-stats"><span>⚔ ${attack}</span><span>♥ ${creature.health}</span><span>⬡ ${creature.defense}</span></span>`));
+  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${creature.species ? `${creature.species} · ${creature.armor}` : `${creature.weaponName} · ${creature.headwear}`}</span><span class="board-stats"><span>⚔ ${attack}</span><span>♥ ${creature.health}</span><span>⬡ ${creature.defense}</span></span>`));
   button.addEventListener('click', () => handleCreatureClick(creature, owner));
   return button;
 }
@@ -542,7 +695,11 @@ function refresh() {
   $('#player-hero').classList.toggle('attacking', Boolean(state.selectedAttacker));
 }
 
-function notify(message) { $('#turn-message').textContent = message; }
+function notify(message) {
+  const status = $('#turn-message');
+  status.textContent = message;
+  status.classList.toggle('ai-thinking', state.turn === 'enemy' && !state.ended);
+}
 function gather(owner, resource) {
   owner.resources[resource] += 2;
   playSound('gather');
@@ -658,7 +815,7 @@ function attack(attacker, target, owner = state.player) {
     refresh();
     if (!checkWinner()) announceCombatResult(result);
     resolve();
-  }, 520));
+  }, duration));
 }
 
 function announceCombatResult(message) {
@@ -678,12 +835,20 @@ function checkWinner() {
 
 function finishGame(victory) {
   state.ended = true;
+  state.campaign.lastVictory = victory;
   playSound(victory ? 'win' : 'defeat');
   state.selectedAttacker = null;
-  $('#result-title').textContent = victory ? 'Victory' : 'Defeat';
+  const beaten = state.campaign.opponentIndex + 1;
+  const nextOpponent = state.campaign.opponents[state.campaign.opponentIndex + 1];
+  $('#result-title').textContent = victory ? nextOpponent ? `${beaten} of 5 victories` : 'Campaign Complete' : 'Defeat';
   $('#result-copy').textContent = victory
-    ? `${state.player.empire.name} claims the field. Your chronicle will be remembered.`
-    : `${state.enemy.empire.name} has taken the crown. The chronicle is not over.`;
+    ? nextOpponent
+      ? `${state.enemy.empire.name} has fallen. ${nextOpponent.name} is the next rival.`
+      : `${state.player.empire.name} has defeated all five rival empires and claimed the crown.`
+    : `${state.enemy.empire.name} has taken the field. Retry this empire to continue the campaign.`;
+  $('#play-again').innerHTML = victory
+    ? nextOpponent ? `NEXT EMPIRE: ${nextOpponent.name} <span>→</span>` : 'CHOOSE ANOTHER EMPIRE <span>→</span>'
+    : 'RETRY THIS EMPIRE <span>↻</span>';
   $('#result-emblem').textContent = victory ? state.player.empire.sigil : state.enemy.empire.sigil;
   $('#result-dialog').showModal();
   refresh();
@@ -696,45 +861,91 @@ function endPlayerTurn() {
 }
 
 function totalCost(cost) { return resourceNames.reduce((total, resource) => total + cost[resource], 0); }
+function waitFor(milliseconds) { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
 
 async function runAiTurn() {
   if (state.ended) return;
   const enemy = state.enemy;
+  await waitFor(450);
+  if (state.ended) return;
   if (!state.gathered) {
     const nextAffordable = enemy.hand.filter((card) => card.kind === 'Creature' && enemy.board.length < 5).sort((a, b) => totalCost(a.cost) - totalCost(b.cost))[0];
     const resourceToGather = nextAffordable ? resourceNames.reduce((best, resource) => nextAffordable.cost[resource] - enemy.resources[resource] > nextAffordable.cost[best] - enemy.resources[best] ? resource : best, resourceNames[0]) : 'food';
+    notify(`${enemy.empire.name} gathers ${resourceToGather}.`);
+    await waitFor(700);
+    if (state.ended) return;
     gather(enemy, resourceToGather);
     state.gathered = true;
   }
   const affordable = enemy.hand.filter((card) => canAfford(enemy, card)).sort((a, b) => totalCost(b.cost) - totalCost(a.cost));
   for (const card of affordable) {
     if ((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.length) continue;
+    notify(`${enemy.empire.name} plays ${card.name}.`);
+    await waitFor(650);
+    if (state.ended) return;
     playCard(card, enemy);
     if (state.ended) return;
   }
   const attacker = enemy.board.find((creature) => creature.canAttack);
   if (attacker) {
-    const target = state.player.board.length && Math.random() < 0.45
+    const target = state.player.board.length && Math.random() < state.campaign.difficulty.aiTargetChance
       ? state.player.board.reduce((weakest, creature) => creature.health < weakest.health ? creature : weakest, state.player.board[0])
       : null;
+    notify(`${enemy.empire.name} readies ${attacker.name} to attack.`);
+    await waitFor(550);
+    if (state.ended) return;
     await attack(attacker, target, enemy);
   }
+  if (state.ended) return;
+  notify(`${enemy.empire.name} ends their turn.`);
+  await waitFor(550);
+  if (state.ended) return;
   refresh();
   if (!checkWinner()) window.setTimeout(() => beginTurn(state.player), 500);
 }
 
 function returnToSelection() {
+  state.ended = false;
+  state.campaign = null;
+  state.selectedEmpire = null;
   $('#result-dialog').close();
   screens.battle.hidden = true;
+  screens.difficulty.hidden = true;
   screens.intro.hidden = false;
   screens.intro.classList.remove('screen');
   void screens.intro.offsetWidth;
   screens.intro.classList.add('screen');
 }
 
+function handleCampaignResult() {
+  if (!state.campaign) return returnToSelection();
+  if (!state.campaign.lastVictory) return startCampaignBattle();
+  if (state.campaign.opponentIndex < state.campaign.opponents.length - 1) {
+    state.campaign.opponentIndex += 1;
+    startCampaignBattle();
+    return;
+  }
+  returnToSelection();
+}
+
+function makeDifficultyChoice(option, index) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'difficulty-choice';
+  button.style.setProperty('--difficulty-color', option.color);
+  button.innerHTML = `<small>ROUTE 0${index + 1}</small><strong>${option.name}</strong><span>${option.summary}</span>`;
+  button.addEventListener('click', () => chooseDifficulty(option.id));
+  return button;
+}
+
 $('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Each 100-card deck has 20 food, 20 wood, 20 stone, 30 creature, and 10 spell cards. Supply cards grant 2 resources when drawn.';
 $('#empire-grid').replaceChildren(...empires.map(makeEmpireChoice));
+$('#difficulty-grid').replaceChildren(...difficulties.map(makeDifficultyChoice));
 $('#rules-button').addEventListener('click', () => $('#rules-dialog').showModal());
+$('#difficulty-back').addEventListener('click', () => {
+  screens.difficulty.hidden = true;
+  screens.intro.hidden = false;
+});
 $('#end-turn').addEventListener('click', endPlayerTurn);
 $('.harvest-row').addEventListener('click', (event) => {
   const button = event.target.closest('[data-resource]');
@@ -756,7 +967,7 @@ $('#player-board').addEventListener('drop', (event) => {
   if (card?.kind === 'Creature') playCard(card, state.player);
 });
 $('#concede-button').addEventListener('click', () => { if (state.started && !state.ended) finishGame(false); });
-$('#play-again').addEventListener('click', returnToSelection);
+$('#play-again').addEventListener('click', handleCampaignResult);
 $('#enemy-hero').addEventListener('click', () => {
   if (state.turn !== 'player' || !state.selectedAttacker || state.busy) return;
   const attacker = state.player.board.find((creature) => creature.instanceId === state.selectedAttacker);

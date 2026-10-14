@@ -20,6 +20,8 @@ Then visit `http://localhost:8000`.
 - Each 100-card deck has 20 food, 20 wood, 20 stone, 30 creature, and 10 spell cards. A supply card grants 2 resources when drawn.
 - Start with 5 cards. At the start of each turn, draw until your hand has 5 cards; supply cards grant resources immediately and do not count toward hand size.
 - Creatures join your company but need to wait a turn before attacking. Click a ready creature, then an enemy creature or commander to attack.
+- After choosing an empire, select Easy Living, Farm Work, Painful Adventure, or True Battlegrounds. Difficulty changes rival health, supplies, and combat behavior.
+- Win a duel to advance through the remaining five empires. Retry a loss or complete the campaign by defeating them all.
 - Defense reduces incoming damage; a strike always deals at least 1 damage.
 - Each empire's shuffled deck holds 100 distinct cards. If a deck runs out, drawing causes increasing fatigue damage.
 

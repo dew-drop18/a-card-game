@@ -477,6 +477,14 @@ button,
 .difficulty-choice strong { color: color-mix(in srgb, var(--difficulty-color) 60%, #28291f); font: 600 27px var(--serif); }
 .difficulty-choice span { color: #706b5b; font: 15px/1.35 var(--serif); }
 .difficulty-choice small { color: var(--difficulty-color); font-size: 10px; text-transform: uppercase; }
+.hand-card.structure-card {
+  background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 56%, color-mix(in srgb, var(--faction) 16%, #f6f0e2) 100%);
+}
+.structure-board-card {
+  border-style: double;
+  background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 65%, color-mix(in srgb, var(--faction) 20%, #f6f0e2) 100%);
+}
+.structure-board-card .board-type { color: #55714e; }
 @media (max-width: 600px) {
   .difficulty-screen { padding: 30px 0; }
   .difficulty-heading { margin-bottom: 22px; }

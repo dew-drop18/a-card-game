@@ -12,6 +12,47 @@ const spellNames = ['Rations from Home', 'Timberwrights', 'Stonecutters', 'Field
 const spellRanks = ['Minor', 'Swift', 'Proven', 'Grand'];
 const resourceNames = ['food', 'wood', 'stone'];
 const resourceMarks = { food: 'F', wood: 'W', stone: 'S' };
+const structureTypes = [
+  { id: 'trade-post', name: 'Trade Post', effect: 'resources', count: 5, text: 'At the start of your turn, gain 1 food, 1 wood, and 1 stone for each friendly creature.' },
+  { id: 'field-hospital', name: 'Field Hospital', effect: 'healing', count: 5, text: 'At the start of your turn, heal each friendly creature by 1.' },
+  { id: 'war-college', name: 'War College', effect: 'training', count: 5, text: 'Friendly creatures have +1 attack and +1 health while this stands.' },
+];
+const supplyCounts = { food: 14, wood: 13, stone: 13 };
+const dynastySpecials = {
+  british: {
+    creatures: ['Agincourt Longbow Company', 'New Model Army Veteran', 'Wellington’s Peninsular Rifleman', 'East India Company Sepoy', 'Royal Marine at Trafalgar'],
+    spells: ['East India Company Charter', 'Trafalgar Cannonade', 'Scutari Field Hospital', 'Wellington’s Square', 'Royal Navy Convoy'],
+    structures: ['Portsmouth Royal Dockyard', 'Fort William Barracks', 'Scutari Military Hospital', 'East India Company Warehouse', 'Royal Naval Hospital'],
+  },
+  mongol: {
+    creatures: ['Keshig Imperial Guard', 'Yam Relay Rider', 'Siege Engineer of Zhongdu', 'Golden Horde Horse Archer', 'Yuan Cavalry of Kublai'],
+    spells: ['Yam Relay Network', 'Siege of Baghdad', 'Mongol Field Surgeon', 'Karakorum Muster', 'Pax Mongolica'],
+    structures: ['Yam Relay Station', 'Keshig Camp', 'Karakorum Infirmary', 'Golden Horde Supply Post', 'Karakorum Healers’ Yurt'],
+  },
+  russian: {
+    creatures: ['Moscow Streltsy Musketeer', 'Don Cossack Host', 'Siberian Frontier Pioneer', 'Borodino Grenadier', 'Baltic Fleet Marine'],
+    spells: ['Siberian Fur Tribute', 'Smolensk Scorched Earth', 'Borodino Field Hospital', 'Cossack Host Muster', 'Winter March'],
+    structures: ['Siberian Ostrog', 'Cossack Host Encampment', 'Borodino Field Hospital', 'Peter the Great Foundry', 'Winter Quarters Infirmary'],
+  },
+  qing: {
+    creatures: ['Eight Banner Guard', 'Green Standard Infantry', 'Kangxi Bannerman', 'Jinchuan Campaign Veteran', 'Zuo Zongtang’s Army Veteran'],
+    spells: ['Grand Canal Granaries', 'Three Feudatories Campaign', 'Imperial Medical Bureau', 'Eight Banner Review', 'Great Wall Garrison'],
+    structures: ['Grand Canal Granary', 'Eight Banner Garrison', 'Imperial Medical Bureau', 'Canton Thirteen Factories', 'Jinchuan Field Hospital'],
+  },
+  spanish: {
+    creatures: ['Flanders Tercio Pikeman', 'Pizarro Expedition Veteran', 'Armada Boarding Crew', 'Manila Galleon Guard', 'Cartagena Dragoon'],
+    spells: ['Manila Galleon Convoy', 'Lepanto Broadside', 'Camino Real Hospital', 'Tercio Pike Square', 'Armada Refit'],
+    structures: ['Casa de Contratación', 'Cartagena Fortress', 'Hospital de la Sangre', 'Royal Mint of Potosí', 'Manila Naval Hospital'],
+  },
+  french: {
+    creatures: ['Carignan-Salières Soldier', 'Coureur des bois', 'Quebec Colonial Militia', 'Louisbourg Marine', 'New France Voyageur'],
+    spells: ['Fur Trade Convoy', 'Siege of Quebec', 'Hôtel-Dieu de Québec', 'Carignan-Salières Muster', 'Louisbourg Refit'],
+    structures: ['Quebec Royal Storehouse', 'Fort Frontenac', 'Hôtel-Dieu de Québec', 'Port-Royal Trading Post', 'Louisbourg Hospital'],
+  },
+};
+const specialSpellEffects = ['harvest', 'damage', 'heal', 'rally', 'ward'];
+const specialStructureEffects = ['resources', 'training', 'healing', 'resources', 'healing'];
+const specialHarvestResources = { british: 'wood', mongol: 'food', russian: 'wood', qing: 'food', spanish: 'stone', french: 'wood' };
 
 function makeCost(food, wood, stone) { return { food, wood, stone }; }
 
@@ -56,8 +97,8 @@ function getUnitLoadout(unit, empire, tier) {
 
 function buildEmpireDeck(empire) {
   const deck = [];
-  const creatureRanks = [0, 2, 4];
   empire.units.forEach((unit, unitIndex) => {
+    const creatureRanks = unitIndex < 5 ? [0, 2, 4] : [0, 2];
     creatureRanks.forEach((rankIndex, rankSlot) => {
       const rank = ranks[rankIndex];
       const tier = Math.min(5, Math.floor(unitIndex / 2) + rankSlot);
@@ -65,7 +106,7 @@ function buildEmpireDeck(empire) {
       const health = 2 + Math.floor(tier / 2);
       const defense = tier >= 4 ? 1 : 0;
       const cost = makeCost(0, 0, 0);
-      cost[resourceNames[unitIndex % resourceNames.length]] = tier + 1;
+      cost.food = tier + 1;
       const loadout = getUnitLoadout(unit, empire, tier);
       deck.push(makeCard(empire, {
         id: `unit-${unitIndex}-${rankIndex}`,
@@ -77,14 +118,14 @@ function buildEmpireDeck(empire) {
       }, deck.length + 1));
     });
   });
-  spellNames.forEach((spell, spellIndex) => {
+  spellNames.slice(0, 5).forEach((spell, spellIndex) => {
     const rankIndex = spellIndex % spellRanks.length;
     const rank = spellRanks[rankIndex];
     const effect = ['harvest', 'harvest', 'harvest', 'heal', 'damage', 'rally', 'ward', 'harvest', 'storm', 'harvest'][spellIndex];
     const resource = resourceNames[spellIndex % resourceNames.length];
     const amount = 2 + rankIndex;
     const cost = makeCost(0, 0, 0);
-    cost[resource] = amount - 1;
+    cost.stone = amount - 1;
     deck.push(makeCard(empire, {
       id: `spell-${spellIndex}`,
       name: `${empire.spellPrefix} ${rank} ${spell}`,
@@ -93,7 +134,7 @@ function buildEmpireDeck(empire) {
     }, deck.length + 1));
   });
   resourceNames.forEach((resource) => {
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < supplyCounts[resource]; index++) {
       deck.push(makeCard(empire, {
         id: `supply-${resource}-${index}`,
         name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply ${String(index + 1).padStart(2, '0')}`,
@@ -101,6 +142,59 @@ function buildEmpireDeck(empire) {
         resource, amount: 2, effect: 'harvest', text: `Gain 2 ${resource}.`,
       }, deck.length + 1));
     }
+  });
+  structureTypes.forEach((structure) => {
+    for (let index = 0; index < structure.count; index++) {
+      deck.push(makeCard(empire, {
+        id: `structure-${structure.id}-${index}`,
+        name: structure.name,
+        kind: 'Structure', cost: makeCost(0, 2, 0), health: 5, effect: structure.effect,
+        glyph: structure.effect === 'resources' ? '⌂' : structure.effect === 'healing' ? '✚' : '⚑',
+        text: structure.text,
+      }, deck.length + 1));
+    }
+  });
+  const specials = dynastySpecials[empire.id];
+  specials.creatures.forEach((name, index) => {
+    const attack = 3 + index;
+    const health = 3 + Math.floor(index / 2);
+    const cost = makeCost(index + 1, 0, 0);
+    deck.push(makeCard(empire, {
+      id: `special-creature-${index}`,
+      name, kind: 'Creature', cost, attack, health, defense: index >= 3 ? 1 : 0,
+      ...getUnitLoadout(name, empire, index + 1),
+      glyph: ['♞', '➶', '⬟', '♜', '⚔'][index],
+      text: `A special unit inspired by ${name}.`,
+      special: true,
+    }, deck.length + 1));
+  });
+  specials.spells.forEach((name, index) => {
+    const effect = specialSpellEffects[index];
+    const amount = index < 3 ? 3 : 2;
+    const resource = specialHarvestResources[empire.id];
+    const cost = makeCost(0, 0, amount - 1);
+    deck.push(makeCard(empire, {
+      id: `special-spell-${index}`,
+      name, kind: 'Spell', cost, glyph: ['✚', 'ϟ', '⚑', '⬡', '✦'][index],
+      effect, amount, resource, text: effect === 'harvest' ? `Gain ${amount} ${resource}, inspired by ${name}.` : spellDescription(effect, amount),
+      special: true,
+    }, deck.length + 1));
+  });
+  specials.structures.forEach((name, index) => {
+    const effect = specialStructureEffects[index];
+    const cost = makeCost(0, 2 + Number(index >= 3), 0);
+    const effectText = effect === 'resources'
+      ? 'At the start of your turn, gain 1 food, 1 wood, and 1 stone for each friendly creature.'
+      : effect === 'healing'
+        ? 'At the start of your turn, heal each friendly creature by 1.'
+        : 'Friendly creatures have +1 attack and +1 health while this stands.';
+    deck.push(makeCard(empire, {
+      id: `special-structure-${index}`,
+      name, kind: 'Structure', cost, health: 5 + Number(index < 3), effect,
+      glyph: ['⌂', '⚑', '✚', '⌂', '✚'][index],
+      text: `${effectText} Inspired by ${name}.`,
+      special: true,
+    }, deck.length + 1));
   });
   return shuffle(deck);
 }
@@ -176,8 +270,8 @@ function arenaSlot(owner, creature) {
 function drawWarrior(creature, x, y, time, direction, action = '', progress = 0) {
   const context = arena.context;
   const color = creature.empire.color;
-  const scale = Math.max(3, Math.min(5, arena.canvas.clientWidth / 170));
-  const bob = Math.sin(time / 180 + creature.attack) * 2.5;
+  const scale = Math.max(4, Math.min(6, arena.canvas.clientWidth / 150));
+  const bob = Math.sin(time / 180 + (creature.attack || creature.health)) * 2.5;
   const step = action === 'idle' ? Math.sin(time / 95 + creature.health) * scale : 0;
   context.save();
   context.translate(x, y + bob);
@@ -213,6 +307,29 @@ function drawWarrior(creature, x, y, time, direction, action = '', progress = 0)
       if (colors[mark]) pixel(column - 3, rowIndex + 3, 1, 1, colors[mark]);
     }));
     pixel(4, 7, 1, 1, skin);
+    pixel(5, 6, 1, 1, '#fff0c4');
+    pixel(6, 6, 1, 1, dark);
+    pixel(5, 7, 1, 1, '#352c35');
+    pixel(3, 8, 1, 1, '#fff0c4');
+    pixel(5.5, 5.5, .5, .5, '#fff9de');
+    pixel(4.5, 7.5, .5, .5, '#d9bd8e');
+    pixel(7.5, 8, .5, .5, gold);
+    if (creature.species === 'lion' || creature.species === 'lynx') {
+      pixel(2, 5, 1, 1, '#e7a34c');
+      pixel(3, 6, 1, 1, '#e7a34c');
+      pixel(7, 8, 2, 1, dark);
+    }
+    if (creature.species === 'dragon') {
+      pixel(5, 5, 2, 1, '#68c8a7');
+      pixel(8, 4, 2, 1, '#df5d50');
+      pixel(2, 8, 2, 1, '#df5d50');
+    }
+    if (creature.species === 'stag') {
+      pixel(1, 2, 1, 2, gold);
+      pixel(8, 2, 1, 2, gold);
+      pixel(2, 3, 1, 1, gold);
+      pixel(7, 3, 1, 1, gold);
+    }
     if (action === 'attack') {
       const clawX = 8 + Math.round(progress * 2);
       pixel(clawX, 7, 2, 1, '#fff3a9');
@@ -245,13 +362,30 @@ function drawWarrior(creature, x, y, time, direction, action = '', progress = 0)
     pixel(3, 1, 4, 1, gold); pixel(2, 2, 6, 2, color);
   }
   pixel(3, 4, 4, 2, skin);
+  pixel(4, 4, 1, 1, '#f5c18b');
+  pixel(4.5, 4.5, .5, .5, '#fff0ca');
   pixel(2, 4, 1, 1, dark);
   pixel(7, 4, 1, 1, dark);
+  pixel(3, 5, 1, 1, '#a9584e');
+  pixel(6, 5, 1, 1, '#a9584e');
   pixel(2, 6, 6, 1, gold);
   pixel(1, 7, 8, 3, armorColor);
   pixel(2, 7, 6, 1, metal);
+  pixel(2, 8, 2, 1, color);
+  pixel(6, 8, 2, 1, color);
+  pixel(4, 8, 2, 2, color);
+  pixel(3, 9, 1, 1, gold);
+  pixel(6, 9, 1, 1, gold);
+  pixel(4, 9, 2, 1, '#563d36');
+  pixel(3.5, 7.5, .5, .5, '#f1e8d0');
+  pixel(5.5, 7.5, .5, .5, '#f1e8d0');
+  pixel(7.5, 8.5, .5, .5, gold);
+  pixel(2.5, 9.5, .5, .5, '#e0bd71');
+  pixel(6.5, 9.5, .5, .5, '#e0bd71');
   pixel(3, 10, 2, 2, dark);
   pixel(6, 10, 2, 2, dark);
+  pixel(2, 11, 1, 1, '#84735d');
+  pixel(7, 11, 1, 1, '#84735d');
   pixel(3, 12, 2, 1, gold);
   pixel(6, 12, 3, 1, gold);
   pixel(0, 8, 1, 2, metal);
@@ -288,6 +422,75 @@ function drawWarrior(creature, x, y, time, direction, action = '', progress = 0)
     context.globalCompositeOperation = 'screen';
     context.fillStyle = '#fff3a9aa';
     context.fillRect(-scale * 5, -scale * 11, scale * 11, scale * 14);
+  }
+  context.restore();
+}
+
+function drawStructure(structure, x, y, time, direction, hit = false) {
+  const context = arena.context;
+  const scale = Math.max(4, Math.min(6, arena.canvas.clientWidth / 150));
+  const color = structure.empire.color;
+  const dark = '#443842';
+  const stone = '#b8ad91';
+  const gold = '#f0bd4d';
+  const bob = Math.sin(time / 500 + structure.health) * 1.2;
+  context.save();
+  context.translate(x, y + bob);
+  if (direction < 0) context.scale(-1, 1);
+  context.fillStyle = '#302e2944';
+  context.beginPath();
+  context.ellipse(0, scale * 10, scale * 7, scale * 1.5, 0, 0, Math.PI * 2);
+  context.fill();
+  const pixel = (px, py, width, height, fill) => {
+    context.fillStyle = fill;
+    context.fillRect((px - 7) * scale, (py - 10) * scale, width * scale, height * scale);
+  };
+  if (structure.effect === 'resources') {
+    pixel(2, 3, 10, 2, dark);
+    pixel(3, 2, 8, 1, gold);
+    pixel(3, 5, 8, 6, stone);
+    pixel(4, 6, 2, 5, dark);
+    pixel(8, 6, 2, 5, dark);
+    pixel(5, 6, 2, 2, '#78a96a');
+    pixel(4, 8, 1, 1, '#78a96a');
+    pixel(9, 5, 1, 2, color);
+    pixel(4.5, 5.5, .5, .5, '#dce1b2');
+    pixel(8.5, 7.5, .5, .5, '#f8db86');
+  } else if (structure.effect === 'healing') {
+    pixel(3, 3, 8, 2, dark);
+    pixel(4, 2, 6, 1, '#eee0c2');
+    pixel(3, 5, 8, 6, '#e5d9c2');
+    pixel(4, 6, 2, 4, color);
+    pixel(8, 6, 2, 4, color);
+    pixel(6, 6, 2, 4, '#fff1ce');
+    pixel(5, 7, 4, 2, '#fff1ce');
+    pixel(2, 5, 1, 6, dark);
+    pixel(11, 5, 1, 6, dark);
+    pixel(5.5, 5.5, .5, .5, '#df4d44');
+    pixel(8.5, 8.5, .5, .5, '#df4d44');
+  } else {
+    pixel(2, 3, 10, 2, dark);
+    pixel(3, 2, 8, 1, gold);
+    pixel(3, 5, 8, 6, stone);
+    pixel(4, 6, 2, 5, dark);
+    pixel(8, 6, 2, 5, dark);
+    pixel(5, 6, 2, 2, color);
+    pixel(5, 9, 2, 2, color);
+    pixel(9, 5, 1, 2, gold);
+    pixel(10, 4, 1, 1, color);
+    pixel(4.5, 5.5, .5, .5, '#eee0c2');
+    pixel(8.5, 7.5, .5, .5, gold);
+  }
+  for (let row = 0; row < 3; row++) {
+    pixel(3, 5 + row * 2, 1, 1, '#eee0c2');
+    pixel(10, 6 + row * 2, 1, 1, '#817763');
+  }
+  pixel(6, 11, 2, 2, dark);
+  pixel(6, 10, 2, 1, gold);
+  if (hit) {
+    context.globalCompositeOperation = 'screen';
+    context.fillStyle = '#fff3a9aa';
+    context.fillRect(-scale * 7, -scale * 8, scale * 14, scale * 12);
   }
   context.restore();
 }
@@ -352,6 +555,11 @@ function drawBattlefield(time) {
   for (const owner of [state.enemy, state.player]) {
     if (!owner?.board) continue;
     owner.board.forEach((creature) => {
+      const position = arenaSlot(owner, creature);
+      if (creature.kind === 'Structure') {
+        drawStructure(creature, position.x, position.y, time, owner.isAI ? -1 : 1, combat?.targetId === creature.instanceId);
+        return;
+      }
       if (combat?.attackerId === creature.instanceId && attackerPosition) {
         drawWarrior(creature, attackerPosition.x, attackerPosition.y, time, owner.isAI ? -1 : 1, 'attack', combatProgress);
         return;
@@ -361,7 +569,6 @@ function drawBattlefield(time) {
         drawWarrior(creature, position.x, position.y, time, owner.isAI ? -1 : 1, 'hit');
         return;
       }
-      const position = arenaSlot(owner, creature);
       drawWarrior(creature, position.x, position.y, time, owner.isAI ? -1 : 1, 'idle');
     });
   }
@@ -656,13 +863,47 @@ function beginTurn(owner) {
   state.round += owner.isAI ? 0 : 1;
   state.gathered = false;
   owner.board.forEach((creature) => { creature.canAttack = true; creature.bonusAttack = 0; });
+  const turnEffects = applyStructureTurnEffects(owner);
   playSound('turn');
   drawUntilHandSize(owner);
   state.selectedAttacker = null;
   $('#round-label').textContent = `EMPIRE ${state.campaign.opponentIndex + 1}/5 · ${state.campaign.currentDifficulty.name.toUpperCase()} · STREAK ${state.campaign.winStreak}`;
-  notify(owner.isAI ? `${owner.empire.name} is taking its turn` : 'Your move, commander');
+  notify(`${owner.isAI ? `${owner.empire.name} is taking its turn` : 'Your move, commander'}${turnEffects ? `. ${turnEffects}` : ''}`);
   refresh();
   if (owner.isAI) window.setTimeout(runAiTurn, 650);
+}
+
+function applyStructureTurnEffects(owner) {
+  const structures = owner.board.filter((card) => card.kind === 'Structure');
+  const resourceStructures = structures.filter((card) => card.effect === 'resources').length;
+  const healingStructures = structures.filter((card) => card.effect === 'healing').length;
+  const friendlyCreatureCount = owner.board.filter((card) => card.kind === 'Creature').length;
+  if (resourceStructures) {
+    const yieldPerResource = resourceStructures * friendlyCreatureCount;
+    resourceNames.forEach((resource) => { owner.resources[resource] += yieldPerResource; });
+  }
+  if (healingStructures) {
+    owner.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+      creature.health = Math.min(creature.maxHealth ?? creature.health, creature.health + healingStructures);
+    });
+  }
+  const effects = [];
+  const generated = resourceStructures * friendlyCreatureCount;
+  if (generated) effects.push(`your Trade Post${resourceStructures > 1 ? 's' : ''} generate${generated} of each supply`);
+  if (healingStructures) effects.push(`your Field Hospital${healingStructures > 1 ? 's' : ''} heal each creature by ${healingStructures}`);
+  return effects.join('; ');
+}
+
+function getStructureBonus(owner) {
+  return owner.board.filter((card) => card.kind === 'Structure' && card.effect === 'training').length;
+}
+
+function currentCreatureHealth(owner, creature) {
+  return creature.health + getStructureBonus(owner);
+}
+
+function creatureAttack(owner, creature) {
+  return creature.attack + (creature.bonusAttack || 0) + getStructureBonus(owner);
 }
 
 function roman(number) { return ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][Math.min(number, 10)]; }
@@ -719,23 +960,33 @@ function makePixelArt(card, compact = false) {
     french: ['#477ec5', '#f3c34b', '#fff0a8', '#453856', '#eb6b6b'],
   }[card.empire.id] || ['#ed664b', '#ffc857', '#fff0a8', '#47395c', '#42b6a5'];
   const [sky, gold, light, shadow, green] = palette;
-  const width = 16;
+  const designWidth = 16;
+  const designHeight = 12;
+  const width = designWidth * 2;
   const cell = compact ? 4 : 6;
-  const height = 12;
+  const height = designHeight * 2;
   const blocks = [];
-  const rect = (x, y, color, w = 1, h = 1) => blocks.push(`<rect x="${x * cell}" y="${y * cell}" width="${w * cell}" height="${h * cell}" fill="${color}"/>`);
+  const rect = (x, y, color, w = 1, h = 1) => blocks.push(`<rect x="${x * 2 * cell}" y="${y * 2 * cell}" width="${w * 2 * cell}" height="${h * 2 * cell}" fill="${color}"/>`);
+  const detailPixel = (x, y, color) => blocks.push(`<rect x="${x * cell}" y="${y * cell}" width="${cell}" height="${cell}" fill="${color}"/>`);
   const landscape = seed % 3;
   const scene = [sky, '#75cbd0', '#e7965c', '#8ac66b', '#4d527a', '#f5bc60'][(seed >>> 4) % 6];
   blocks.push(`<rect width="${width * cell}" height="${height * cell}" fill="${scene}"/>`);
-  for (let x = 0; x < width; x += 2) rect(x, 2 + ((x + landscape) % 3), light);
+  for (let x = 0; x < designWidth; x += 2) rect(x, 2 + ((x + landscape) % 3), light);
   rect(1, 2, gold, 2, 2);
-  for (let x = 0; x < width; x++) rect(x, 9 + ((x + landscape) % 2), [green, '#53a987', '#408e9b'][landscape], 1, height);
-  rect(0, 11, shadow, width, 1);
+  for (let x = 0; x < designWidth; x++) {
+    rect(x, 8 + ((x + landscape) % 2), ['#607b58', '#527d77', '#7b7258'][landscape], 1, 1);
+    rect(x, 9 + ((x + landscape) % 2), [green, '#53a987', '#408e9b'][landscape], 1, designHeight - 9);
+  }
+  rect(0, 11, shadow, designWidth, 1);
+  for (let x = 1; x < designWidth; x += 3) {
+    rect(x, 10 + (x % 2), '#d7c78b');
+    rect(x + 1, 11, '#647b52');
+  }
 
   const drawRows = (rows, colors, offsetY = 0) => rows.forEach((row, y) => {
-    [...row].forEach((pixel, x) => { if (pixel !== '.') rect(x + Math.floor((width - row.length) / 2), y + offsetY, colors[pixel]); });
+    [...row].forEach((pixel, x) => { if (pixel !== '.') rect(x + Math.floor((designWidth - row.length) / 2), y + offsetY, colors[pixel]); });
   });
-  const type = card.kind === 'Resource' ? 'harvest' : card.kind === 'Spell' ? card.effect : 'creature';
+  const type = card.kind === 'Resource' ? 'harvest' : card.kind === 'Structure' ? 'structure' : card.kind === 'Spell' ? card.effect : 'creature';
   if (card.kind === 'Creature' && card.species) {
     const beasts = {
       lion: ['....GGGG....', '..GGGGGGGG..', '.GGCCCCCCGG.', '.GCCCCCCCCG.', '..CCCCCCCC..', '..CCCDCCCCC.', '.CCCCC.CCC..', '..CCC...CC..', '.CC.C...C.C.'],
@@ -749,9 +1000,30 @@ function makePixelArt(card, compact = false) {
       owl: ['.....DDDD.....', '....DGGGGD....', '...DCCCCCCD...', '..DCCCDCCCDCC..', '..DCCGGGGCCCD..', '...DCCCCCCD....', '....CCCCCC.....', '...CC....CC....'],
     };
     drawRows(beasts[card.species] || beasts.wolf, { D: shadow, C: sky, G: gold }, 2);
-    rect(10, 7, light);
-    if (card.species === 'stag') { rect(4, 1, gold); rect(10, 1, gold); }
-    if (card.species === 'eagle' || card.species === 'owl') rect(7, 6, '#e99b36', 2, 1);
+    rect(9, 6, light);
+    rect(10, 6, shadow);
+    rect(9, 7, '#342b39');
+    rect(8, 8, light);
+    if (card.species === 'stag') {
+      rect(4, 1, gold); rect(10, 1, gold); rect(3, 2, gold); rect(11, 2, gold);
+      rect(5, 3, light); rect(9, 3, light);
+    }
+    if (card.species === 'eagle' || card.species === 'owl') {
+      rect(7, 6, '#e99b36', 2, 1);
+      rect(8, 7, gold);
+      rect(5, 5, light);
+      rect(10, 5, light);
+    }
+    if (card.species === 'dragon') {
+      rect(3, 4, '#e65750'); rect(4, 3, '#e65750');
+      rect(10, 3, '#e65750'); rect(11, 4, '#e65750');
+      rect(4, 8, '#71d1b3'); rect(10, 8, '#71d1b3');
+    }
+    if (card.species === 'lion' || card.species === 'lynx' || card.species === 'bear') {
+      rect(4, 7, gold); rect(5, 8, light); rect(10, 8, gold);
+      rect(6, 9, shadow, 3, 1);
+    }
+    [[11, 13, light], [13, 14, gold], [17, 16, shadow], [20, 13, light], [22, 16, gold], [15, 18, '#fff0a8']].forEach(([x, y, color]) => detailPixel(x, y, color));
   } else if (card.kind === 'Creature') {
     const name = card.name.toLowerCase();
     const horse = /rider|foal|horde|elephant|khan/.test(name);
@@ -764,11 +1036,36 @@ function makePixelArt(card, compact = false) {
     }
     if (card.headwear === 'crown and helm') {
       rect(6, 0, gold); rect(8, 0, gold); rect(5, 1, gold, 5, 1);
+      rect(6, 2, light); rect(8, 2, light);
     } else if (card.headwear?.includes('fur')) {
       rect(5, 1, light, 5, 1); rect(6, 0, sky, 3, 1);
+      rect(5, 2, '#d7c9a7'); rect(9, 2, '#d7c9a7');
     } else if (card.headwear?.includes('plumed')) {
       rect(7, 0, '#e65d48', 2, 2); rect(5, 2, gold, 5, 1);
+      rect(8, 1, light); rect(7, 3, '#e65d48');
     }
+    rect(6, 4, light); rect(8, 4, light);
+    rect(7, 5, '#583d3d');
+    rect(5, 7, light); rect(9, 7, light);
+    rect(6, 8, gold); rect(8, 8, gold);
+    rect(5, 9, '#7e4539'); rect(9, 9, '#7e4539');
+    rect(4, 10, shadow); rect(9, 10, shadow);
+    if (card.armor === 'plate armor') {
+      rect(6, 6, light, 3, 1);
+      rect(7, 7, '#e2e1d3');
+      rect(6, 9, '#b0b9b7', 3, 1);
+    } else if (card.armor === 'chain mail') {
+      rect(5, 8, '#c5c4ae'); rect(7, 8, '#c5c4ae'); rect(9, 8, '#c5c4ae');
+      rect(6, 9, '#c5c4ae'); rect(8, 9, '#c5c4ae');
+    } else {
+      rect(6, 8, '#d3a66a', 3, 1);
+      rect(7, 9, '#7f4e3d');
+    }
+    if (card.special) {
+      rect(2, 1, gold); rect(3, 0, gold); rect(4, 1, gold);
+      rect(3, 2, light);
+    }
+    [[11, 12, light], [13, 14, gold], [15, 15, '#fff0a8'], [17, 13, light], [19, 17, gold], [21, 15, '#fff0a8'], [10, 19, shadow], [23, 19, shadow]].forEach(([x, y, color]) => detailPixel(x, y, color));
     if (card.weapon === 'bow') {
       rect(12, 2, gold); rect(11, 3, gold); rect(10, 4, gold); rect(9, 5, gold);
     } else if (card.weapon === 'lance') {
@@ -781,25 +1078,78 @@ function makePixelArt(card, compact = false) {
       rect(11, 5, light, 1, 3); rect(12, 4, gold); rect(12, 8, gold);
     }
     for (let star = 0; star < card.attack % 3; star++) rect(1 + star * 2, 3, gold);
+  } else if (type === 'structure') {
+    if (card.effect === 'resources') {
+      drawRows(['......GG......', '.....GGGG.....', '....GGGGGG....', '...DDDDDDDD...', '..DCCCCCCCCD..', '..DCCCDCCCCD..', '..DCCCCCCCCD..', '..DDDDDDDDDD..', '....D....D....', '....D....D....'], { D: shadow, C: green, G: gold }, 1);
+      rect(6, 6, '#87543b', 4, 1);
+      rect(7, 7, gold, 2, 1);
+      rect(4, 8, '#6b4939'); rect(11, 8, '#6b4939');
+      rect(5, 9, light); rect(10, 9, light);
+    } else if (card.effect === 'healing') {
+      drawRows(['....DDDDDD....', '...DCCCCCCD...', '..DCCCCCCCCD..', '..DCCCDCCCCD..', '..DCCCCCCCCD..', '..DDDDDDDDDD..', '....D....D....', '....D....D....'], { D: shadow, C: light }, 2);
+      rect(7, 5, '#df4d44', 2, 5);
+      rect(5, 7, '#df4d44', 6, 2);
+      rect(5, 5, gold); rect(10, 5, gold);
+      rect(4, 10, color); rect(11, 10, color);
+    } else {
+      drawRows(['...DDDDDDDD...', '..DCCCCCCCCD..', '.DCCCCCCCCCCD.', '.DCCCDCCCCCCD.', '.DCCCCCCCCCCD.', '..DDDDDDDDDD..', '....D....D....', '....D....D....'], { D: shadow, C: '#a99b7f' }, 2);
+      rect(6, 5, gold, 1, 4); rect(9, 5, gold, 1, 4);
+      rect(7, 6, color, 2, 3);
+      rect(7, 4, color); rect(8, 4, color);
+      rect(4, 10, shadow); rect(11, 10, shadow);
+    }
+    rect(3, 10, shadow); rect(12, 10, shadow);
+    rect(4, 11, '#d7c78b', 8, 1);
+    if (card.special) {
+      rect(7, 0, gold, 2, 1);
+      rect(8, 1, color, 1, 2);
+      rect(9, 1, gold, 2, 1);
+    }
+    [[7, 12, light], [10, 15, gold], [13, 18, shadow], [18, 12, light], [22, 16, gold], [25, 19, shadow]].forEach(([x, y, color]) => detailPixel(x, y, color));
   } else if (type === 'harvest') {
-    if (card.resource === 'wood') drawRows(['.....LLL....', '....LLLLL...', '...LLLLLLL..', '..LLLLLLLLL.', '.....WWW....', '.....WWW....', '...WWWWWWW..'], { L: green, W: '#8c503e' }, 1);
-    else if (card.resource === 'stone') drawRows(['......TT....', '.....TTTT...', '....TTTTTT..', '...TTTTTTTT.', '..TTTTTTTTTT'], { T: '#c7d5d4' }, 3);
-    else drawRows(['......LL....', '......LL....', '.....LLL....', '....LLLL....', '......WW....', '......WW....'], { L: gold, W: green }, 3);
+    if (card.resource === 'wood') {
+      drawRows(['.....LLL....', '....LLLLL...', '...LLLLLLL..', '..LLLLLLLLL.', '.....WWW....', '.....WWW....', '...WWWWWWW..'], { L: green, W: '#8c503e' }, 1);
+      rect(5, 5, '#7ec67b'); rect(9, 4, '#b1d77f'); rect(6, 7, '#704733');
+      rect(4, 9, '#8c503e', 2, 1); rect(10, 9, '#8c503e', 2, 1);
+    } else if (card.resource === 'stone') {
+      drawRows(['......TT....', '.....TTTT...', '....TTTTTT..', '...TTTTTTTT.', '..TTTTTTTTTT'], { T: '#c7d5d4' }, 3);
+      rect(7, 5, '#f5f0dd'); rect(9, 6, '#8d9da2'); rect(5, 8, '#849398', 2, 1);
+      rect(11, 9, '#dce3d8'); rect(4, 10, '#657a82', 3, 1);
+    } else {
+      drawRows(['......LL....', '......LL....', '.....LLL....', '....LLLL....', '......WW....', '......WW....'], { L: gold, W: green }, 3);
+      rect(6, 4, '#fff0b0'); rect(8, 5, '#fff0b0'); rect(5, 7, '#df9e4d');
+      rect(4, 9, green); rect(9, 9, green); rect(6, 10, '#8d503c', 2, 1);
+    }
   } else if (type === 'heal') {
     drawRows(['......GG....', '......GG....', '...GGGGGGGG..', '...GGGGGGGG..', '......GG....', '......GG....'], { G: light }, 3);
+    rect(5, 5, '#df4d44', 6, 2);
+    rect(7, 3, '#df4d44', 2, 6);
+    rect(6, 4, gold); rect(9, 4, gold);
+    rect(6, 8, '#fff0a8'); rect(9, 8, '#fff0a8');
+    [[11, 8, light], [20, 10, gold], [10, 14, '#df4d44'], [22, 15, light]].forEach(([x, y, color]) => detailPixel(x, y, color));
   } else if (type === 'damage' || type === 'storm') {
     drawRows(['......RR....', '.....RYYR...', '....RYMMYR..', '....RMMMMR..', '...RMMMMMMR.', '..RRMMMMMMRR', '...RRMMMMRR.'], { R: '#df4d44', Y: gold, M: light }, 2);
     rect(2, 2, light); rect(12, 4, gold); rect(3, 7, '#fff0a8');
+    rect(5, 5, '#fff0a8'); rect(9, 7, '#df4d44'); rect(7, 8, gold);
+    if (type === 'storm') {
+      rect(2, 1, light, 1, 2); rect(12, 1, light, 1, 2);
+      rect(4, 9, '#df4d44', 2, 1); rect(10, 9, '#df4d44', 2, 1);
+    }
+    [[10, 7, light], [14, 11, gold], [19, 8, '#fff0a8'], [23, 13, '#df4d44'], [12, 18, light]].forEach(([x, y, color]) => detailPixel(x, y, color));
   } else if (type === 'rally') {
     drawRows(['....DDDD....', '...DAAAD....', '...DAAAD....', '...DDDDD....', '....DDD.....', '....DDD.....'], { D: shadow, A: sky }, 3);
     rect(6, 2, '#ed5d57', 3, 3); rect(6, 2, gold); rect(8, 3, gold); rect(7, 4, gold);
+    rect(3, 4, gold); rect(12, 4, gold); rect(4, 3, light); rect(11, 3, light);
+    rect(6, 9, '#fff0a8'); rect(9, 9, '#fff0a8');
+    [[12, 10, light], [21, 12, gold], [10, 17, '#fff0a8'], [24, 18, light]].forEach(([x, y, color]) => detailPixel(x, y, color));
   } else {
     drawRows(['...DDDDDD...', '..DAAAAAAD..', '.DAAGGGAAAD.', '.DAAGGGAAAD.', '.DAAAAAAAAD.', '..DAAAAAAD..', '...DDDDDD...'], { D: shadow, A: sky, G: gold }, 2);
     rect(7, 5, light, 2, 2);
+    [[9, 11, light], [12, 14, gold], [19, 11, '#fff0a8'], [22, 17, light], [15, 20, gold]].forEach(([x, y, color]) => detailPixel(x, y, color));
   }
   const sparkleCount = 2 + (seed % 4);
   for (let index = 0; index < sparkleCount; index++) {
-    const x = (seed >>> (index * 5)) % width;
+    const x = (seed >>> (index * 5)) % designWidth;
     const y = ((seed >>> (index * 3 + 2)) % 5) + 1;
     rect(x, y, index % 2 ? gold : light);
   }
@@ -813,15 +1163,15 @@ function makePixelArt(card, compact = false) {
 function makeHandCard(card) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `hand-card${card.kind === 'Spell' ? ' spell-card' : ''}`;
-  button.draggable = card.kind === 'Creature' && window.matchMedia('(pointer: fine)').matches;
+  button.className = `hand-card${card.kind === 'Spell' ? ' spell-card' : ''}${card.kind === 'Structure' ? ' structure-card' : ''}`;
+  button.draggable = (card.kind === 'Creature' || card.kind === 'Structure') && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
-  button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5 && card.kind === 'Creature';
-  button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : ''}`);
+  button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5 && (card.kind === 'Creature' || card.kind === 'Structure');
+  button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : card.kind === 'Structure' ? ` Health ${card.health}. No attack.` : ''}`);
   button.innerHTML = `<span class="hand-card-top"><span class="hand-symbol">${card.glyph}</span><span class="choice-number">${card.empire.sigil}</span></span>`;
-  button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.kind}</span>${card.weaponName ? `<span class="hand-weapon">⚔ ${card.weaponName}${card.mounted ? ' · Mounted' : ''}</span><span class="hand-feature">${card.species ? `${card.species} · ${card.armor}` : `${card.armor} · ${card.headwear}`}</span>` : ''}<span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : ''}`));
+  button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.special ? 'EMPIRE SPECIAL · ' : ''}${card.kind}</span>${card.weaponName ? `<span class="hand-weapon">⚔ ${card.weaponName}${card.mounted ? ' · Mounted' : ''}</span><span class="hand-feature">${card.species ? `${card.species} · ${card.armor}` : `${card.armor} · ${card.headwear}`}</span>` : ''}<span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : card.kind === 'Structure' ? `<span class="hand-stats"><span>♥ ${card.health}</span><span>NO ATTACK</span></span>` : ''}`));
   button.addEventListener('dragstart', (event) => {
-    if (card.kind !== 'Creature' || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5) {
+    if ((card.kind !== 'Creature' && card.kind !== 'Structure') || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5) {
       event.preventDefault();
       return;
     }
@@ -835,13 +1185,19 @@ function makeHandCard(card) {
 function makeBoardCard(creature, owner) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `board-card${creature.canAttack ? '' : ' sleeping'}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}`;
+  const isStructure = creature.kind === 'Structure';
+  const health = isStructure ? creature.health : currentCreatureHealth(owner, creature);
+  const attack = isStructure ? null : creatureAttack(owner, creature);
+  button.className = `board-card${!isStructure && !creature.canAttack ? ' sleeping' : ''}${isStructure ? ' structure-board-card' : ''}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}`;
   button.style.cssText = factionStyle(creature.empire);
   button.dataset.cardInstance = creature.instanceId;
-  const attack = creature.attack + (creature.bonusAttack || 0);
-  button.setAttribute('aria-label', `${creature.name}: attack ${attack}, health ${creature.health}, defense ${creature.defense}${creature.canAttack ? ', ready to attack' : ', cannot attack yet'}`);
-  button.innerHTML = `<span class="board-top"><span class="card-sigil">${creature.glyph}</span></span>`;
-  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${creature.species ? `${creature.species} · ${creature.armor}` : `${creature.weaponName} · ${creature.headwear}`}</span><span class="board-stats"><span>⚔ ${attack}</span><span>♥ ${creature.health}</span><span>⬡ ${creature.defense}</span></span>`));
+  button.setAttribute('aria-label', isStructure
+    ? `${creature.name}, structure: health ${health}, no attack. ${creature.text}`
+    : `${creature.name}: attack ${attack}, health ${health}, defense ${creature.defense}${creature.canAttack ? ', ready to attack' : ', cannot attack yet'}`);
+  button.innerHTML = `<span class="board-top"><span class="card-sigil">${creature.glyph}</span></span><span class="board-type">${creature.special ? 'EMPIRE SPECIAL · ' : ''}${isStructure ? 'STRUCTURE' : 'CREATURE'}</span>`;
+  const description = isStructure ? creature.text : creature.species ? `${creature.species} · ${creature.armor}` : `${creature.weaponName} · ${creature.headwear}`;
+  const stats = isStructure ? `<span>♥ ${health}</span><span>NO ATTACK</span>` : `<span>⚔ ${attack}</span><span>♥ ${health}</span><span>⬡ ${creature.defense}</span>`;
+  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${description}</span><span class="board-stats">${stats}</span>`));
   button.addEventListener('click', () => handleCreatureClick(creature, owner));
   return button;
 }
@@ -856,7 +1212,7 @@ function renderBoard(element, owner, label) {
   if (!owner.board.length) {
     const empty = document.createElement('span');
     empty.className = 'board-empty';
-    empty.textContent = owner.isAI ? label : 'Drop a creature here or play it from your hand';
+    empty.textContent = owner.isAI ? label : 'Drop a creature or structure here, or play it from your hand';
     element.append(empty);
     return;
   }
@@ -915,14 +1271,18 @@ function playCard(card, owner) {
   if (state.ended || state.busy || !canAfford(owner, card)) return;
   if (owner.isAI && state.turn !== 'enemy' || !owner.isAI && state.turn !== 'player') return;
   if (onlineConnection?.room) return sendOnlineAction({ type: 'play', cardId: card.instanceId });
-  if (card.kind === 'Creature' && owner.board.length >= 5) return notify('Your company is full.');
-  if ((card.effect === 'rally' || card.effect === 'ward') && !owner.board.length) return notify('You need a creature on the field for that spell.');
+  if ((card.kind === 'Creature' || card.kind === 'Structure') && owner.board.length >= 5) return notify('Your battlefield is full.');
+  if ((card.effect === 'rally' || card.effect === 'ward') && !owner.board.some((item) => item.kind !== 'Structure')) return notify('You need a creature on the field for that spell.');
   resourceNames.forEach((resource) => { owner.resources[resource] -= card.cost[resource]; });
   owner.hand = owner.hand.filter((item) => item.instanceId !== card.instanceId);
   if (card.kind === 'Creature') {
-    owner.board.push({ ...card, canAttack: false, bonusAttack: 0 });
+    owner.board.push({ ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0 });
     playSound('play');
     notify(`${card.name} joins ${owner.isAI ? 'the rival' : 'your'} company.`);
+  } else if (card.kind === 'Structure') {
+    owner.board.push({ ...card });
+    playSound('play');
+    notify(`${card.name} is built on ${owner.isAI ? 'the rival' : 'your'} battlefield.`);
   } else {
     playSound('spell');
     applySpell(card, owner);
@@ -933,29 +1293,38 @@ function playCard(card, owner) {
 
 function applySpell(card, caster) {
   const rival = caster.isAI ? state.player : state.enemy;
-  const friendliest = caster.board.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
-  const mostWounded = rival.board.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
+  const friendlyCreatures = caster.board.filter((creature) => creature.kind !== 'Structure');
+  const rivalCreatures = rival.board.filter((creature) => creature.kind !== 'Structure');
+  const friendliest = friendlyCreatures.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
+  const mostWounded = rivalCreatures.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
   if (card.effect === 'harvest') caster.resources[card.resource] += card.amount;
   if (card.effect === 'heal') caster.health = Math.min(caster.maxHealth, caster.health + card.amount);
   if (card.effect === 'damage') { if (mostWounded) damageCreature(mostWounded, card.amount); else rival.health -= card.amount; }
   if (card.effect === 'rally' && friendliest) friendliest.bonusAttack = (friendliest.bonusAttack || 0) + card.amount;
-  if (card.effect === 'ward' && friendliest) { friendliest.health += card.amount; friendliest.defense += 1; }
-  if (card.effect === 'storm') rival.board.slice().forEach((creature) => damageCreature(creature, card.amount));
+  if (card.effect === 'ward' && friendliest) {
+    friendliest.maxHealth = (friendliest.maxHealth ?? friendliest.health) + card.amount;
+    friendliest.health += card.amount;
+    friendliest.defense += 1;
+  }
+  if (card.effect === 'storm') rivalCreatures.slice().forEach((creature) => damageCreature(creature, card.amount));
   notify(`${card.name} takes effect.`);
 }
 
 function damageCreature(creature, amount) {
   if (!creature) return;
-  creature.health -= Math.max(1, amount - creature.defense);
-  if (creature.health <= 0) {
-    for (const owner of [state.player, state.enemy]) owner.board = owner.board.filter((item) => item.instanceId !== creature.instanceId);
+  creature.health -= Math.max(1, amount - (creature.defense || 0));
+  const owner = [state.player, state.enemy].find((player) => player.board.includes(creature));
+  if (owner && (creature.kind === 'Structure' ? creature.health <= 0 : currentCreatureHealth(owner, creature) <= 0)) {
+    owner.board = owner.board.filter((item) => item.instanceId !== creature.instanceId);
     notify(`${creature.name} leaves the field.`);
+    if (creature.kind === 'Structure') owner.board = owner.board.filter((item) => item.kind !== 'Creature' || currentCreatureHealth(owner, item) > 0);
   }
 }
 
 function handleCreatureClick(creature, owner) {
   if (state.ended || state.busy) return;
   if (owner === state.player && state.turn === 'player') {
+    if (creature.kind === 'Structure') return notify('Structures cannot attack.');
     if (!creature.canAttack) return notify('That creature cannot attack until your next turn.');
     state.selectedAttacker = state.selectedAttacker === creature.instanceId ? null : creature.instanceId;
     playSound('select');
@@ -977,7 +1346,7 @@ function attack(attacker, target, owner = state.player) {
   $('#end-turn').disabled = true;
   attacker.canAttack = false;
   state.selectedAttacker = null;
-  const strength = attacker.attack + (attacker.bonusAttack || 0);
+  const strength = creatureAttack(owner, attacker);
   const rival = owner.isAI ? state.player : state.enemy;
   const attackerElement = document.querySelector(`[data-card-instance="${attacker.instanceId}"]`);
   const targetElement = target
@@ -995,11 +1364,11 @@ function attack(attacker, target, owner = state.player) {
   return new Promise((resolve) => window.setTimeout(() => {
     let result;
     if (target) {
-      const retaliation = target.attack + (target.bonusAttack || 0);
-      const dealt = Math.max(1, strength - target.defense);
-      const received = Math.max(1, retaliation - attacker.defense);
+      const retaliation = target.kind === 'Structure' ? 0 : creatureAttack(rival, target);
+      const dealt = Math.max(1, strength - (target.defense || 0));
+          const received = target.kind === 'Structure' ? 0 : Math.max(1, retaliation - attacker.defense);
       damageCreature(target, strength);
-      if (owner.board.includes(attacker)) damageCreature(attacker, retaliation);
+      if (owner.board.includes(attacker) && retaliation) damageCreature(attacker, retaliation);
       const attackerSurvives = owner.board.includes(attacker);
       const targetSurvives = rival.board.includes(target);
       if (attackerSurvives && !targetSurvives) result = `${attacker.name} wins the clash!`;
@@ -1075,7 +1444,10 @@ async function runAiTurn() {
   await waitFor(450);
   if (state.ended) return;
   if (!state.gathered) {
-    const nextAffordable = enemy.hand.filter((card) => card.kind === 'Creature' && enemy.board.length < 5).sort((a, b) => totalCost(a.cost) - totalCost(b.cost))[0];
+    const nextAffordable = enemy.hand
+      .filter((card) => (card.kind !== 'Creature' && card.kind !== 'Structure' || enemy.board.length < 5)
+        && !((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.some((item) => item.kind !== 'Structure')))
+      .sort((a, b) => totalCost(a.cost) - totalCost(b.cost))[0];
     const resourceToGather = nextAffordable ? resourceNames.reduce((best, resource) => nextAffordable.cost[resource] - enemy.resources[resource] > nextAffordable.cost[best] - enemy.resources[best] ? resource : best, resourceNames[0]) : 'food';
     notify(`${enemy.empire.name} gathers ${resourceToGather}.`);
     await waitFor(700);
@@ -1085,17 +1457,18 @@ async function runAiTurn() {
   }
   const affordable = enemy.hand.filter((card) => canAfford(enemy, card)).sort((a, b) => totalCost(b.cost) - totalCost(a.cost));
   for (const card of affordable) {
-    if ((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.length) continue;
+    if ((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.some((item) => item.kind !== 'Structure')) continue;
+    if ((card.kind === 'Creature' || card.kind === 'Structure') && enemy.board.length >= 5) continue;
     notify(`${enemy.empire.name} plays ${card.name}.`);
     await waitFor(650);
     if (state.ended) return;
     playCard(card, enemy);
     if (state.ended) return;
   }
-  const attacker = enemy.board.find((creature) => creature.canAttack);
+  const attacker = enemy.board.find((creature) => creature.kind !== 'Structure' && creature.canAttack);
   if (attacker) {
     const target = state.player.board.length && Math.random() < state.campaign.difficulty.aiTargetChance
-      ? state.player.board.reduce((weakest, creature) => creature.health < weakest.health ? creature : weakest, state.player.board[0])
+      ? state.player.board.reduce((weakest, creature) => (creature.kind === 'Structure' ? creature.health : currentCreatureHealth(state.player, creature)) < (weakest.kind === 'Structure' ? weakest.health : currentCreatureHealth(state.player, weakest)) ? creature : weakest, state.player.board[0])
       : null;
     notify(`${enemy.empire.name} readies ${attacker.name} to attack.`);
     await waitFor(550);
@@ -1153,7 +1526,7 @@ function makeDifficultyChoice(option, index) {
   return button;
 }
 
-$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Each 100-card deck has 20 food, 20 wood, 20 stone, 30 creature, and 10 spell cards. Supply cards grant 2 resources when drawn.';
+$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Each 100-card deck has 40 supply cards, 30 creatures, 10 spells, and 20 structures, including 15 empire-specific special cards. Supply cards grant 2 resources when drawn.';
 $('#empire-grid').replaceChildren(...empires.map(makeEmpireChoice));
 $('#difficulty-grid').replaceChildren(...difficulties.map(makeDifficultyChoice));
 $('#rules-button').addEventListener('click', () => $('#rules-dialog').showModal());
@@ -1183,7 +1556,7 @@ $('#player-board').addEventListener('drop', (event) => {
   event.preventDefault();
   $('#player-board').classList.remove('drag-over');
   const card = state.player.hand.find((item) => item.instanceId === event.dataTransfer.getData('text/plain'));
-  if (card?.kind === 'Creature') playCard(card, state.player);
+  if (card?.kind === 'Creature' || card?.kind === 'Structure') playCard(card, state.player);
 });
 $('#concede-button').addEventListener('click', () => {
   if (!state.started || state.ended) return;

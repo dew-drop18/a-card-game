@@ -41,14 +41,15 @@ When running locally, `multiplayer-config.js` must point to the deployed Worker,
 
 - Each commander starts with 30 health. Bring the rival to 0 to win.
 - Once per turn, gather 2 food, wood, or stone. Resources carry over between turns.
-- Cards cost combinations of food, wood, and stone. Play as many affordable cards as you can.
-- Each 100-card deck has 20 food, 20 wood, 20 stone, 30 creature, and 10 spell cards. A supply card grants 2 resources when drawn.
+- Creatures cost food, spells cost stone, and structures cost wood. Play as many affordable cards as you can.
+- Each 100-card deck has 40 supply cards, 30 creatures, 10 spells, and 20 structures. Of these, 15 are empire-specific special cards: five creatures, five spells, and five structures. A supply card grants 2 resources when drawn.
 - Start with 5 cards. At the start of each turn, draw until your hand has 5 cards; supply cards grant resources immediately and do not count toward hand size.
-- Creatures join your company but need to wait a turn before attacking. Click a ready creature, then an enemy creature or commander to attack.
+- Creatures join your company but need to wait a turn before attacking. Structures occupy a battlefield slot, have health but no attack, and can be targeted by rival creatures.
+- Trade Posts grant 1 of each resource per friendly creature at the start of your turn; Field Hospitals heal each friendly creature by 1; War Colleges give friendly creatures +1 attack and +1 health while they stand.
 - After choosing an empire, select Easy Living, Farm Work, Painful Adventure, or True Battlegrounds. Difficulty changes rival health, supplies, and combat behavior.
 - Win a dynasty to advance through the remaining five empires. Each consecutive win adds 6 rival health, 1 of each starting supply, and more aggressive targeting to the next dynasty. Losing resets the streak and retries the current dynasty at your selected starting difficulty.
 - Defense reduces incoming damage; a strike always deals at least 1 damage.
 - Each empire's shuffled deck holds 100 distinct cards. If a deck runs out, drawing causes increasing fatigue damage.
 - Online matches use the same card rules as the campaign, but the opponent is another player and all moves are validated by the Worker.
 
-Choose from the British, Mongol, Russian, Qing, Spanish, and French colonial empires, each with a distinct banner color and card collection.
+Choose from the British, Mongol, Russian, Qing, Spanish, and French colonial empires, each with a distinct banner color, collection of 15 history-inspired special cards, and online duel option at the bottom of the startup screen.

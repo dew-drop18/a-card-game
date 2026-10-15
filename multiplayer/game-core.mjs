@@ -20,6 +20,47 @@ const bestiary = {
   'iberian lynx': 'lynx', 'frontier bison': 'bison',
   'great horned owl': 'owl',
 };
+const structureTypes = [
+  { id: 'trade-post', name: 'Trade Post', effect: 'resources', count: 5, text: 'At the start of your turn, gain 1 food, 1 wood, and 1 stone for each friendly creature.' },
+  { id: 'field-hospital', name: 'Field Hospital', effect: 'healing', count: 5, text: 'At the start of your turn, heal each friendly creature by 1.' },
+  { id: 'war-college', name: 'War College', effect: 'training', count: 5, text: 'Friendly creatures have +1 attack and +1 health while this stands.' },
+];
+const supplyCounts = { food: 14, wood: 13, stone: 13 };
+const dynastySpecials = {
+  british: {
+    creatures: ['Agincourt Longbow Company', 'New Model Army Veteran', 'Wellington’s Peninsular Rifleman', 'East India Company Sepoy', 'Royal Marine at Trafalgar'],
+    spells: ['East India Company Charter', 'Trafalgar Cannonade', 'Scutari Field Hospital', 'Wellington’s Square', 'Royal Navy Convoy'],
+    structures: ['Portsmouth Royal Dockyard', 'Fort William Barracks', 'Scutari Military Hospital', 'East India Company Warehouse', 'Royal Naval Hospital'],
+  },
+  mongol: {
+    creatures: ['Keshig Imperial Guard', 'Yam Relay Rider', 'Siege Engineer of Zhongdu', 'Golden Horde Horse Archer', 'Yuan Cavalry of Kublai'],
+    spells: ['Yam Relay Network', 'Siege of Baghdad', 'Mongol Field Surgeon', 'Karakorum Muster', 'Pax Mongolica'],
+    structures: ['Yam Relay Station', 'Keshig Camp', 'Karakorum Infirmary', 'Golden Horde Supply Post', 'Karakorum Healers’ Yurt'],
+  },
+  russian: {
+    creatures: ['Moscow Streltsy Musketeer', 'Don Cossack Host', 'Siberian Frontier Pioneer', 'Borodino Grenadier', 'Baltic Fleet Marine'],
+    spells: ['Siberian Fur Tribute', 'Smolensk Scorched Earth', 'Borodino Field Hospital', 'Cossack Host Muster', 'Winter March'],
+    structures: ['Siberian Ostrog', 'Cossack Host Encampment', 'Borodino Field Hospital', 'Peter the Great Foundry', 'Winter Quarters Infirmary'],
+  },
+  qing: {
+    creatures: ['Eight Banner Guard', 'Green Standard Infantry', 'Kangxi Bannerman', 'Jinchuan Campaign Veteran', 'Zuo Zongtang’s Army Veteran'],
+    spells: ['Grand Canal Granaries', 'Three Feudatories Campaign', 'Imperial Medical Bureau', 'Eight Banner Review', 'Great Wall Garrison'],
+    structures: ['Grand Canal Granary', 'Eight Banner Garrison', 'Imperial Medical Bureau', 'Canton Thirteen Factories', 'Jinchuan Field Hospital'],
+  },
+  spanish: {
+    creatures: ['Flanders Tercio Pikeman', 'Pizarro Expedition Veteran', 'Armada Boarding Crew', 'Manila Galleon Guard', 'Cartagena Dragoon'],
+    spells: ['Manila Galleon Convoy', 'Lepanto Broadside', 'Camino Real Hospital', 'Tercio Pike Square', 'Armada Refit'],
+    structures: ['Casa de Contratación', 'Cartagena Fortress', 'Hospital de la Sangre', 'Royal Mint of Potosí', 'Manila Naval Hospital'],
+  },
+  french: {
+    creatures: ['Carignan-Salières Soldier', 'Coureur des bois', 'Quebec Colonial Militia', 'Louisbourg Marine', 'New France Voyageur'],
+    spells: ['Fur Trade Convoy', 'Siege of Quebec', 'Hôtel-Dieu de Québec', 'Carignan-Salières Muster', 'Louisbourg Refit'],
+    structures: ['Quebec Royal Storehouse', 'Fort Frontenac', 'Hôtel-Dieu de Québec', 'Port-Royal Trading Post', 'Louisbourg Hospital'],
+  },
+};
+const specialSpellEffects = ['harvest', 'damage', 'heal', 'rally', 'ward'];
+const specialStructureEffects = ['resources', 'training', 'healing', 'resources', 'healing'];
+const specialHarvestResources = { british: 'wood', mongol: 'food', russian: 'wood', qing: 'food', spanish: 'stone', french: 'wood' };
 
 function makeCost(food, wood, stone) { return { food, wood, stone }; }
 
@@ -64,15 +105,14 @@ function getUnitLoadout(unit, empire, tier) {
 
 export function buildEmpireDeck(empire, random = Math.random) {
   const deck = [];
-  const creatureRanks = [0, 2, 4];
   empire.units.forEach((unit, unitIndex) => {
+    const creatureRanks = unitIndex < 5 ? [0, 2, 4] : [0, 2];
     creatureRanks.forEach((rankIndex, rankSlot) => {
       const tier = Math.min(5, Math.floor(unitIndex / 2) + rankSlot);
       const attack = 1 + tier;
       const health = 2 + Math.floor(tier / 2);
       const defense = tier >= 4 ? 1 : 0;
-      const cost = makeCost(0, 0, 0);
-      cost[resourceNames[unitIndex % resourceNames.length]] = tier + 1;
+      const cost = makeCost(tier + 1, 0, 0);
       deck.push(makeCard(empire, {
         id: `unit-${unitIndex}-${rankIndex}`,
         name: `${ranks[rankIndex]} ${unit}`,
@@ -83,13 +123,13 @@ export function buildEmpireDeck(empire, random = Math.random) {
       }, deck.length + 1));
     });
   });
-  spellNames.forEach((spell, spellIndex) => {
+  spellNames.slice(0, 5).forEach((spell, spellIndex) => {
     const rankIndex = spellIndex % spellRanks.length;
     const effect = spellEffects[spellIndex];
     const resource = resourceNames[spellIndex % resourceNames.length];
     const amount = 2 + rankIndex;
     const cost = makeCost(0, 0, 0);
-    cost[resource] = amount - 1;
+    cost.stone = amount - 1;
     deck.push(makeCard(empire, {
       id: `spell-${spellIndex}`,
       name: `${empire.spellPrefix} ${spellRanks[rankIndex]} ${spell}`,
@@ -98,7 +138,7 @@ export function buildEmpireDeck(empire, random = Math.random) {
     }, deck.length + 1));
   });
   resourceNames.forEach((resource) => {
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < supplyCounts[resource]; index++) {
       deck.push(makeCard(empire, {
         id: `supply-${resource}-${index}`,
         name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply ${String(index + 1).padStart(2, '0')}`,
@@ -106,6 +146,59 @@ export function buildEmpireDeck(empire, random = Math.random) {
         resource, amount: 2, effect: 'harvest', text: `Gain 2 ${resource}.`,
       }, deck.length + 1));
     }
+  });
+  structureTypes.forEach((structure) => {
+    for (let index = 0; index < structure.count; index++) {
+      deck.push(makeCard(empire, {
+        id: `structure-${structure.id}-${index}`,
+        name: structure.name,
+        kind: 'Structure', cost: makeCost(0, 2, 0), health: 5, effect: structure.effect,
+        glyph: structure.effect === 'resources' ? '⌂' : structure.effect === 'healing' ? '✚' : '⚑',
+        text: structure.text,
+      }, deck.length + 1));
+    }
+  });
+  const specials = dynastySpecials[empire.id];
+  specials.creatures.forEach((name, index) => {
+    const attack = 3 + index;
+    const health = 3 + Math.floor(index / 2);
+    const cost = makeCost(index + 1, 0, 0);
+    deck.push(makeCard(empire, {
+      id: `special-creature-${index}`,
+      name, kind: 'Creature', cost, attack, health, defense: index >= 3 ? 1 : 0,
+      ...getUnitLoadout(name, empire, index + 1),
+      glyph: ['♞', '➶', '⬟', '♜', '⚔'][index],
+      text: `A special unit inspired by ${name}.`,
+      special: true,
+    }, deck.length + 1));
+  });
+  specials.spells.forEach((name, index) => {
+    const effect = specialSpellEffects[index];
+    const amount = index < 3 ? 3 : 2;
+    const resource = specialHarvestResources[empire.id];
+    const cost = makeCost(0, 0, amount - 1);
+    deck.push(makeCard(empire, {
+      id: `special-spell-${index}`,
+      name, kind: 'Spell', cost, glyph: ['✚', 'ϟ', '⚑', '⬡', '✦'][index],
+      effect, amount, resource, text: effect === 'harvest' ? `Gain ${amount} ${resource}, inspired by ${name}.` : spellDescription(effect, amount),
+      special: true,
+    }, deck.length + 1));
+  });
+  specials.structures.forEach((name, index) => {
+    const effect = specialStructureEffects[index];
+    const cost = makeCost(0, 2 + Number(index >= 3), 0);
+    const effectText = effect === 'resources'
+      ? 'At the start of your turn, gain 1 food, 1 wood, and 1 stone for each friendly creature.'
+      : effect === 'healing'
+        ? 'At the start of your turn, heal each friendly creature by 1.'
+        : 'Friendly creatures have +1 attack and +1 health while this stands.';
+    deck.push(makeCard(empire, {
+      id: `special-structure-${index}`,
+      name, kind: 'Structure', cost, health: 5 + Number(index < 3), effect,
+      glyph: ['⌂', '⚑', '✚', '⌂', '✚'][index],
+      text: `${effectText} Inspired by ${name}.`,
+      special: true,
+    }, deck.length + 1));
   });
   for (let index = deck.length - 1; index > 0; index--) {
     const randomIndex = Math.floor(random() * (index + 1));
@@ -150,9 +243,30 @@ export function createGame(empireIds, random = Math.random) {
   return { players, turn: 0, round: 1, gathered: false, finished: null, version: 0 };
 }
 
+function trainingBonus(player) {
+  return player.board.filter((card) => card.kind === 'Structure' && card.effect === 'training').length;
+}
+
+function effectiveCreatureHealth(player, creature) {
+  return creature.health + trainingBonus(player);
+}
+
+function creatureAttack(player, creature) {
+  return creature.attack + (creature.bonusAttack || 0) + trainingBonus(player);
+}
+
+function removeDeadCreatures(player) {
+  player.board = player.board.filter((card) => card.kind !== 'Creature' || effectiveCreatureHealth(player, card) > 0);
+}
+
 function dealDamage(player, creature, amount) {
-  creature.health -= Math.max(1, amount - creature.defense);
-  if (creature.health <= 0) player.board = player.board.filter((item) => item.instanceId !== creature.instanceId);
+  creature.health -= Math.max(1, amount - (creature.defense || 0));
+  const defeated = creature.kind === 'Structure'
+    ? creature.health <= 0
+    : effectiveCreatureHealth(player, creature) <= 0;
+  if (!defeated) return;
+  player.board = player.board.filter((item) => item.instanceId !== creature.instanceId);
+  if (creature.kind === 'Structure') removeDeadCreatures(player);
 }
 
 function checkFinished(game) {
@@ -161,8 +275,10 @@ function checkFinished(game) {
 }
 
 function applySpell(card, caster, rival) {
-  const friendliest = caster.board.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
-  const mostWounded = rival.board.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
+  const friendlyCreatures = caster.board.filter((item) => item.kind === 'Creature');
+  const rivalCreatures = rival.board.filter((item) => item.kind === 'Creature');
+  const friendliest = friendlyCreatures.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
+  const mostWounded = rivalCreatures.reduce((target, creature) => !target || creature.health < target.health ? creature : target, null);
   if (card.effect === 'harvest') caster.resources[card.resource] += card.amount;
   if (card.effect === 'heal') caster.health = Math.min(caster.maxHealth, caster.health + card.amount);
   if (card.effect === 'damage') {
@@ -170,8 +286,25 @@ function applySpell(card, caster, rival) {
     else rival.health -= card.amount;
   }
   if (card.effect === 'rally' && friendliest) friendliest.bonusAttack = (friendliest.bonusAttack || 0) + card.amount;
-  if (card.effect === 'ward' && friendliest) { friendliest.health += card.amount; friendliest.defense += 1; }
-  if (card.effect === 'storm') rival.board.slice().forEach((creature) => dealDamage(rival, creature, card.amount));
+  if (card.effect === 'ward' && friendliest) {
+    friendliest.maxHealth = (friendliest.maxHealth ?? friendliest.health) + card.amount;
+    friendliest.health += card.amount;
+    friendliest.defense += 1;
+  }
+  if (card.effect === 'storm') rivalCreatures.forEach((creature) => dealDamage(rival, creature, card.amount));
+}
+
+function applyStructureTurnEffects(player) {
+  const structures = player.board.filter((card) => card.kind === 'Structure');
+  const resourceCount = structures.filter((card) => card.effect === 'resources').length;
+  const healingCount = structures.filter((card) => card.effect === 'healing').length;
+  const creatureCount = player.board.filter((card) => card.kind === 'Creature').length;
+  if (resourceCount) resourceNames.forEach((resource) => { player.resources[resource] += resourceCount * creatureCount; });
+  if (healingCount) {
+    player.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+      creature.health = Math.min(creature.maxHealth ?? creature.health, creature.health + healingCount);
+    });
+  }
 }
 
 export function applyAction(game, seat, action) {
@@ -193,32 +326,34 @@ export function applyAction(game, seat, action) {
     if (index === -1) throw new Error('That card is not in your hand.');
     const card = player.hand[index];
     if (!resourceNames.every((resource) => player.resources[resource] >= card.cost[resource])) throw new Error('You cannot afford that card.');
-    if (card.kind === 'Creature' && player.board.length >= 5) throw new Error('Your company is full.');
-    if ((card.effect === 'rally' || card.effect === 'ward') && !player.board.length) throw new Error('You need a creature on the field for that spell.');
+    if ((card.kind === 'Creature' || card.kind === 'Structure') && player.board.length >= 5) throw new Error('Your battlefield is full.');
+    if ((card.effect === 'rally' || card.effect === 'ward') && !player.board.some((item) => item.kind === 'Creature')) throw new Error('You need a creature on the field for that spell.');
     resourceNames.forEach((resource) => { player.resources[resource] -= card.cost[resource]; });
     player.hand.splice(index, 1);
-    if (card.kind === 'Creature') player.board.push({ ...card, canAttack: false, bonusAttack: 0 });
+    if (card.kind === 'Creature') player.board.push({ ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0 });
+    else if (card.kind === 'Structure') player.board.push({ ...card });
     else applySpell(card, player, rival);
   } else if (action.type === 'attack') {
     if (typeof action.attackerId !== 'string') throw new Error('Choose a creature to attack with.');
     const attacker = player.board.find((card) => card.instanceId === action.attackerId);
-    if (!attacker || !attacker.canAttack) throw new Error('That creature cannot attack.');
+    if (!attacker || attacker.kind === 'Structure' || !attacker.canAttack) throw new Error('That creature cannot attack.');
     if (action.targetId !== null && typeof action.targetId !== 'string') throw new Error('Invalid target.');
     const target = action.targetId === null ? null : rival.board.find((card) => card.instanceId === action.targetId);
     if (action.targetId !== null && !target) throw new Error('That rival creature is no longer on the field.');
     attacker.canAttack = false;
-    const strength = attacker.attack + (attacker.bonusAttack || 0);
+    const strength = creatureAttack(player, attacker);
     if (target) {
-      const retaliation = target.attack + (target.bonusAttack || 0);
+      const retaliation = target.kind === 'Structure' ? 0 : creatureAttack(rival, target);
       dealDamage(rival, target, strength);
-      dealDamage(player, attacker, retaliation);
+      if (retaliation) dealDamage(player, attacker, retaliation);
     } else rival.health -= strength;
   } else if (action.type === 'end-turn') {
     game.turn = 1 - seat;
     if (game.turn === 0) game.round += 1;
     game.gathered = false;
     const nextPlayer = game.players[game.turn];
-    nextPlayer.board.forEach((creature) => { creature.canAttack = true; creature.bonusAttack = 0; });
+    nextPlayer.board.filter((creature) => creature.kind !== 'Structure').forEach((creature) => { creature.canAttack = true; creature.bonusAttack = 0; });
+    applyStructureTurnEffects(nextPlayer);
     drawToFive(nextPlayer);
   } else if (action.type === 'surrender') {
     game.finished = { winner: 1 - seat, reason: 'surrender' };

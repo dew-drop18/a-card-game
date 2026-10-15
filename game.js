@@ -230,6 +230,7 @@ function playSound(effect) {
   const now = audioContext.currentTime;
   const sounds = {
     start: [[392, 587, .18, 'triangle'], [587, 784, .24, 'triangle']],
+    match: [[523, 659, .13, 'triangle'], [659, 880, .2, 'triangle'], [880, 1175, .28, 'sine']],
     draw: [[523, 784, .12, 'sine']],
     resource: [[392, 587, .15, 'triangle'], [587, 784, .19, 'sine']],
     gather: [[294, 440, .18, 'triangle'], [440, 587, .21, 'sine']],
@@ -638,24 +639,38 @@ function setOnlineMode(enabled) {
   else $('#online-status').textContent = 'Choose an empire above to join a one-on-one match.';
 }
 
+function updateMatchmakingRoom(message, status = 'searching') {
+  const statusElement = $('#matchmaking-status');
+  statusElement.classList.toggle('is-error', status === 'error');
+  statusElement.classList.toggle('is-matched', status === 'matched');
+  $('#matchmaking-message').textContent = message;
+  $('#matchmaking-title').textContent = status === 'matched' ? 'Rival found' : status === 'error' ? 'Could not find a rival' : 'Finding a rival';
+  const cancelButton = $('#matchmaking-cancel');
+  cancelButton.disabled = status === 'matched';
+  cancelButton.textContent = status === 'error' ? 'BACK TO START' : 'CANCEL SEARCH';
+  if (!$('#matchmaking-dialog').open) $('#matchmaking-dialog').showModal();
+}
+
 function startOnlineMatch(empireId) {
+  playSound('select');
+  const empire = empires.find((item) => item.id === empireId);
+  $('#matchmaking-empire').textContent = empire ? `Searching as ${empire.name} · ${empire.region}` : 'Searching for a rival commander';
+  updateMatchmakingRoom('Connecting to matchmaking…');
   let url;
   try {
     url = multiplayerSocketUrl('/match');
   } catch (error) {
-    $('#online-status').textContent = error.message;
     setOnlineMode(false);
-    $('#online-status').textContent = error.message;
+    updateMatchmakingRoom(error.message, 'error');
     return;
   }
   onlineSelection = false;
   $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = true; });
   $('#online-mode-button').textContent = 'CANCEL SEARCH';
-  $('#online-status').textContent = 'Connecting to matchmaking…';
   let socket;
   try { socket = new WebSocket(url); } catch {
     setOnlineMode(false);
-    $('#online-status').textContent = 'Could not open matchmaking. Check the endpoint and try again.';
+    updateMatchmakingRoom('Could not open matchmaking. Check your connection and try again.', 'error');
     return;
   }
   onlineConnection = { queue: socket, room: null };
@@ -666,17 +681,18 @@ function startOnlineMatch(empireId) {
     if (onlineConnection?.queue !== socket) return;
     let message;
     try { message = JSON.parse(event.data); } catch { return; }
-    if (message.type === 'queued') $('#online-status').textContent = message.message;
+    if (message.type === 'queued') updateMatchmakingRoom(message.message);
     if (message.type === 'error') {
-      $('#online-status').textContent = message.message;
       onlineConnection = null;
       setOnlineMode(false);
-      $('#online-status').textContent = message.message;
+      updateMatchmakingRoom(message.message, 'error');
     }
     if (message.type === 'matched') {
       const credentials = { roomId: message.roomId, token: message.token };
       sessionStorage.setItem('empires-online-match', JSON.stringify(credentials));
       onlineConnection = { queue: null, room: null };
+      playSound('match');
+      updateMatchmakingRoom('Your rival has joined. Preparing the battlefield…', 'matched');
       connectOnlineRoom(credentials);
     }
   });
@@ -684,13 +700,14 @@ function startOnlineMatch(empireId) {
     if (onlineConnection?.queue === socket) {
       onlineConnection = null;
       setOnlineMode(false);
-      $('#online-status').textContent = 'Could not reach matchmaking. Check the endpoint and try again.';
+      updateMatchmakingRoom('Could not reach matchmaking. Check your connection and try again.', 'error');
     }
   });
   socket.addEventListener('close', () => {
     if (onlineConnection?.queue === socket) {
       onlineConnection = null;
       setOnlineMode(false);
+      if ($('#matchmaking-dialog').open) updateMatchmakingRoom('Matchmaking ended. Please try again.', 'error');
     }
   });
 }
@@ -700,14 +717,14 @@ function connectOnlineRoom(credentials) {
   try {
     url = multiplayerSocketUrl(`/room/${encodeURIComponent(credentials.roomId)}`);
   } catch (error) {
-    $('#online-status').textContent = error.message;
+    updateMatchmakingRoom(error.message, 'error');
     return;
   }
   url.searchParams.set('token', credentials.token);
   $('#online-status').textContent = 'Connecting to your rival’s battlefield…';
   let socket;
   try { socket = new WebSocket(url); } catch {
-    $('#online-status').textContent = 'Could not open the match connection. Reload to reconnect.';
+    updateMatchmakingRoom('Could not open the match connection. Please try again.', 'error');
     return;
   }
   onlineConnection = { queue: null, room: socket };
@@ -729,10 +746,16 @@ function connectOnlineRoom(credentials) {
       state.busy = true;
       refresh();
       notify('Connection lost. Reload this page within 90 seconds to reconnect.');
+    } else if (onlineConnection?.room === socket && !state.started) {
+      onlineConnection = null;
+      updateMatchmakingRoom('The match connection closed before the duel started. Please try again.', 'error');
     }
   });
   socket.addEventListener('error', () => {
-    if (onlineConnection?.room === socket) $('#online-status').textContent = 'Connection interrupted. Reload to reconnect.';
+    if (onlineConnection?.room === socket) {
+      if (!state.started) updateMatchmakingRoom('Could not connect to the battlefield. Please try again.', 'error');
+      else $('#online-status').textContent = 'Connection interrupted. Reload to reconnect.';
+    }
   });
 }
 
@@ -751,6 +774,7 @@ function renderOnlineState(match) {
   screens.intro.hidden = true;
   screens.difficulty.hidden = true;
   screens.battle.hidden = false;
+  if ($('#matchmaking-dialog').open) $('#matchmaking-dialog').close();
   startBattlefieldAnimation();
   updateHeader();
   $('#round-label').textContent = `ONLINE DUEL · ${roman(state.round)}`;
@@ -797,6 +821,7 @@ function cancelOnlineSearch() {
     onlineConnection = null;
     socket.close();
   }
+  if ($('#matchmaking-dialog').open) $('#matchmaking-dialog').close();
   setOnlineMode(false);
 }
 
@@ -1487,6 +1512,7 @@ function returnToSelection() {
   if (onlineConnection?.queue) onlineConnection.queue.close();
   if (onlineConnection?.room) onlineConnection.room.close();
   onlineConnection = null;
+  if ($('#matchmaking-dialog').open) $('#matchmaking-dialog').close();
   $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = false; });
   sessionStorage.removeItem('empires-online-match');
   onlineSelection = false;
@@ -1533,6 +1559,27 @@ $('#rules-button').addEventListener('click', () => $('#rules-dialog').showModal(
 $('#online-mode-button').addEventListener('click', () => {
   if (onlineConnection?.queue) cancelOnlineSearch();
   else setOnlineMode(!onlineSelection);
+});
+$('#matchmaking-cancel').addEventListener('click', () => {
+  if ($('#matchmaking-cancel').disabled) return;
+  if ($('#matchmaking-status').classList.contains('is-error')) {
+    if (onlineConnection?.queue) onlineConnection.queue.close();
+    if (onlineConnection?.room) onlineConnection.room.close();
+    onlineConnection = null;
+    sessionStorage.removeItem('empires-online-match');
+    $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = false; });
+    setOnlineMode(false);
+    $('#matchmaking-dialog').close();
+    return;
+  }
+  cancelOnlineSearch();
+});
+$('#matchmaking-dialog').addEventListener('cancel', (event) => {
+  if ($('#matchmaking-status').classList.contains('is-matched')) {
+    event.preventDefault();
+    return;
+  }
+  cancelOnlineSearch();
 });
 $('#difficulty-back').addEventListener('click', () => {
   screens.difficulty.hidden = true;

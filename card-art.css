@@ -485,7 +485,74 @@ button,
   background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 65%, color-mix(in srgb, var(--faction) 20%, #f6f0e2) 100%);
 }
 .structure-board-card .board-type { color: #55714e; }
+.matchmaking-dialog {
+  width: min(440px, calc(100% - 32px));
+  padding: 34px;
+  border: 1px solid #b9aa89;
+  background: #f6f0e2;
+  color: #28291f;
+  box-shadow: 0 18px 64px #1e201a55;
+  text-align: center;
+}
+.matchmaking-dialog::backdrop { background: #24251dcc; }
+.matchmaking-dialog h2 {
+  margin: 8px 0;
+  color: #473b30;
+  font: 600 34px/1 var(--serif);
+}
+.matchmaking-empire { margin: 0 0 24px; color: #777565; font-size: 11px; }
+.matchmaking-status {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 12px;
+  border-block: 1px solid #d3cab8;
+  color: #615c4c;
+  font-size: 12px;
+}
+.matchmaking-status.is-error { color: #a14432; }
+.matchmaking-status.is-matched { color: #4e7148; font-weight: 700; }
+.matchmaking-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 2px solid #d3cab8;
+  border-top-color: #a94b38;
+  border-radius: 50%;
+  animation: matchmaking-spin .8s linear infinite;
+}
+.matchmaking-status.is-matched .matchmaking-spinner {
+  border-color: #668357;
+  animation: none;
+}
+.matchmaking-status.is-matched .matchmaking-spinner::after {
+  display: block;
+  content: '✓';
+  font-size: 12px;
+  line-height: 14px;
+}
+.matchmaking-status.is-error .matchmaking-spinner { display: none; }
+.matchmaking-cancel {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #a94b38;
+  background: transparent;
+  color: #873b2d;
+  font: 500 10px 'DM Mono','Courier New',monospace;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+.matchmaking-cancel:hover { background: #a94b38; color: #fff8e8; }
+.matchmaking-cancel:disabled { cursor: wait; opacity: .5; }
+@keyframes matchmaking-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .matchmaking-spinner { animation-duration: 2s; }
+}
 @media (max-width: 600px) {
+  .matchmaking-dialog { padding: 27px 20px; }
   .difficulty-screen { padding: 30px 0; }
   .difficulty-heading { margin-bottom: 22px; }
   .difficulty-grid { grid-template-columns: 1fr; gap: 9px; }

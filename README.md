@@ -31,7 +31,7 @@ The free plan has usage limits and no uptime guarantee. Limits and plan terms ca
 
    Wrangler creates the Durable Object namespaces on the first deployment. The command prints the Worker URL, usually `https://empires-oaths-multiplayer.<your-subdomain>.workers.dev`.
 4. Set `window.MULTIPLAYER_ENDPOINT` in `multiplayer-config.js` to that HTTPS Worker URL (no `/match` or `/room` suffix), then commit and push the config change so GitHub Pages publishes it.
-5. Open the published game, select **FIND AN ONLINE DUEL**, then choose an empire. Share the page with a friend; the first two commanders in the queue are paired automatically.
+5. Open the published game, select **FIND AN ONLINE DUEL**, then choose an empire. A wait room stays open while matchmaking searches; cancel the search there if needed. When another commander joins, a sound plays and both players enter the duel automatically.
 
 The Worker URL in `multiplayer-config.js` is public configuration, not a secret. Do not put Cloudflare API tokens or account credentials in the site. Keep the `ALLOWED_ORIGIN` restriction enabled for the published Pages origin. The `/health` endpoint can be used to check that the Worker is responding.
 

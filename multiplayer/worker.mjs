@@ -184,7 +184,7 @@ export class GameRoom {
         return json({ error: 'Invalid room setup.' }, 400);
       }
       if (await this.ctx.storage.get('game')) return json({ error: 'Room already exists.' }, 409);
-      await this.ctx.storage.put({ game, tokens, disconnectedAt: [null, null] });
+      await this.ctx.storage.put('game', { game, tokens, disconnectedAt: [null, null] });
       return json({ status: 'created' }, 201);
     }
     if (request.method !== 'GET' || request.headers.get('Upgrade') !== 'websocket') {

@@ -124,6 +124,8 @@ const difficulties = [
 ];
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null };
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
+let onlineSelection = false;
+let onlineConnection = null;
 let audioContext;
 
 function playSound(effect) {
@@ -389,6 +391,16 @@ function createPlayer(empire, isAI, difficulty) {
   return { empire, isAI, health, maxHealth: health, resources: makeCost(supplies, supplies, supplies), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0 };
 }
 
+function getCampaignDifficulty(campaign) {
+  const streak = campaign.winStreak;
+  return {
+    ...campaign.difficulty,
+    enemyHealth: campaign.difficulty.enemyHealth + streak * 6,
+    enemySupplies: campaign.difficulty.enemySupplies + streak,
+    aiTargetChance: Math.min(.98, campaign.difficulty.aiTargetChance + streak * .05),
+  };
+}
+
 function startGame(empireId) {
   state.selectedEmpire = empires.find((empire) => empire.id === empireId);
   $('#chosen-empire-label').textContent = `${state.selectedEmpire.name} · ${state.selectedEmpire.region}`;
@@ -398,6 +410,189 @@ function startGame(empireId) {
   screens.difficulty.hidden = false;
 }
 
+function multiplayerSocketUrl(path) {
+  const endpoint = window.MULTIPLAYER_ENDPOINT?.trim();
+  if (!endpoint) throw new Error('Online play is not configured yet. Follow the Multiplayer setup in README.md.');
+  const url = new URL(endpoint);
+  if (url.protocol === 'https:') url.protocol = 'wss:';
+  else if (url.protocol === 'http:') url.protocol = 'ws:';
+  if (url.protocol !== 'wss:' && url.protocol !== 'ws:') throw new Error('The multiplayer endpoint must use HTTPS or WSS.');
+  if (window.location.protocol === 'https:' && url.protocol !== 'wss:') throw new Error('The multiplayer endpoint must use HTTPS on this page.');
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}${path}`;
+  return url;
+}
+
+function setOnlineMode(enabled) {
+  onlineSelection = enabled;
+  const button = $('#online-mode-button');
+  button.textContent = enabled ? 'CANCEL ONLINE MODE' : 'FIND AN ONLINE DUEL';
+  $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = Boolean(onlineConnection?.queue); });
+  if (!enabled) $('#online-status').textContent = '';
+  else $('#online-status').textContent = 'Choose an empire above to join a one-on-one match.';
+}
+
+function startOnlineMatch(empireId) {
+  let url;
+  try {
+    url = multiplayerSocketUrl('/match');
+  } catch (error) {
+    $('#online-status').textContent = error.message;
+    setOnlineMode(false);
+    $('#online-status').textContent = error.message;
+    return;
+  }
+  onlineSelection = false;
+  $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = true; });
+  $('#online-mode-button').textContent = 'CANCEL SEARCH';
+  $('#online-status').textContent = 'Connecting to matchmaking…';
+  let socket;
+  try { socket = new WebSocket(url); } catch {
+    setOnlineMode(false);
+    $('#online-status').textContent = 'Could not open matchmaking. Check the endpoint and try again.';
+    return;
+  }
+  onlineConnection = { queue: socket, room: null };
+  socket.addEventListener('open', () => {
+    if (onlineConnection?.queue === socket) socket.send(JSON.stringify({ type: 'join', empireId }));
+  });
+  socket.addEventListener('message', (event) => {
+    if (onlineConnection?.queue !== socket) return;
+    let message;
+    try { message = JSON.parse(event.data); } catch { return; }
+    if (message.type === 'queued') $('#online-status').textContent = message.message;
+    if (message.type === 'error') {
+      $('#online-status').textContent = message.message;
+      onlineConnection = null;
+      setOnlineMode(false);
+      $('#online-status').textContent = message.message;
+    }
+    if (message.type === 'matched') {
+      const credentials = { roomId: message.roomId, token: message.token };
+      sessionStorage.setItem('empires-online-match', JSON.stringify(credentials));
+      onlineConnection = { queue: null, room: null };
+      connectOnlineRoom(credentials);
+    }
+  });
+  socket.addEventListener('error', () => {
+    if (onlineConnection?.queue === socket) {
+      onlineConnection = null;
+      setOnlineMode(false);
+      $('#online-status').textContent = 'Could not reach matchmaking. Check the endpoint and try again.';
+    }
+  });
+  socket.addEventListener('close', () => {
+    if (onlineConnection?.queue === socket) {
+      onlineConnection = null;
+      setOnlineMode(false);
+    }
+  });
+}
+
+function connectOnlineRoom(credentials) {
+  let url;
+  try {
+    url = multiplayerSocketUrl(`/room/${encodeURIComponent(credentials.roomId)}`);
+  } catch (error) {
+    $('#online-status').textContent = error.message;
+    return;
+  }
+  url.searchParams.set('token', credentials.token);
+  $('#online-status').textContent = 'Connecting to your rival’s battlefield…';
+  let socket;
+  try { socket = new WebSocket(url); } catch {
+    $('#online-status').textContent = 'Could not open the match connection. Reload to reconnect.';
+    return;
+  }
+  onlineConnection = { queue: null, room: socket };
+  socket.addEventListener('open', () => { $('#online-status').textContent = ''; });
+  socket.addEventListener('message', (event) => {
+    let message;
+    try { message = JSON.parse(event.data); } catch { return; }
+    if (message.type === 'state') renderOnlineState(message);
+    else if (message.type === 'error') {
+      state.busy = false;
+      notify(message.message);
+      refresh();
+    } else if (message.type === 'opponent-disconnected') {
+      notify(`Your rival lost connection. They have ${message.reconnectSeconds} seconds to return.`);
+    } else if (message.type === 'opponent-connected') notify('Your rival has returned to the field.');
+  });
+  socket.addEventListener('close', () => {
+    if (onlineConnection?.room === socket && state.started && !state.ended) {
+      state.busy = true;
+      refresh();
+      notify('Connection lost. Reload this page within 90 seconds to reconnect.');
+    }
+  });
+  socket.addEventListener('error', () => {
+    if (onlineConnection?.room === socket) $('#online-status').textContent = 'Connection interrupted. Reload to reconnect.';
+  });
+}
+
+function renderOnlineState(match) {
+  const local = match.players[match.seat];
+  const rival = match.players[1 - match.seat];
+  state.player = { ...local, isAI: false };
+  state.enemy = { ...rival, isAI: true, hand: [] };
+  state.turn = match.turn === match.seat ? 'player' : 'enemy';
+  state.round = match.round;
+  state.gathered = state.turn === 'player' && match.gathered;
+  state.busy = false;
+  state.started = true;
+  state.ended = Boolean(match.finished);
+  state.selectedAttacker = null;
+  screens.intro.hidden = true;
+  screens.difficulty.hidden = true;
+  screens.battle.hidden = false;
+  startBattlefieldAnimation();
+  updateHeader();
+  $('#round-label').textContent = `ONLINE DUEL · ${roman(state.round)}`;
+  $('#concede-button').disabled = state.ended;
+  refresh();
+  if (match.finished) {
+    const victory = match.finished.winner === match.seat;
+    const reason = match.finished.reason;
+    $('#result-title').textContent = reason === 'abandoned' ? 'Duel Abandoned' : victory ? 'Victory' : 'Defeat';
+    if (reason === 'abandoned') $('#result-copy').textContent = 'Both commanders lost connection. This duel has been closed.';
+    else if (reason === 'disconnect') $('#result-copy').textContent = victory
+      ? 'Your rival did not return to the field in time.'
+      : 'You lost connection for too long and forfeited the duel.';
+    else if (reason === 'surrender') $('#result-copy').textContent = victory
+      ? 'Your rival surrendered the field.'
+      : 'You surrendered the duel.';
+    else $('#result-copy').textContent = victory
+      ? 'The rival commander has fallen. You claim the crown.'
+      : 'Your commander has fallen. The rival claims the crown.';
+    $('#play-again').textContent = 'RETURN TO BANNERS →';
+    $('#result-emblem').textContent = match.finished.winner === null ? '⚔' : victory ? state.player.empire.sigil : state.enemy.empire.sigil;
+    if (!$('#result-dialog').open) $('#result-dialog').showModal();
+  } else {
+    if ($('#result-dialog').open) $('#result-dialog').close();
+    notify(state.turn === 'player' ? 'Your move, commander.' : `${state.enemy.empire.name} is taking their turn.`);
+  }
+}
+
+function sendOnlineAction(action) {
+  const socket = onlineConnection?.room;
+  if (!socket || socket.readyState !== WebSocket.OPEN || state.busy || state.ended) {
+    notify('The battlefield is reconnecting. Please wait before moving.');
+    return false;
+  }
+  state.busy = true;
+  refresh();
+  socket.send(JSON.stringify(action));
+  return true;
+}
+
+function cancelOnlineSearch() {
+  if (onlineConnection?.queue) {
+    const socket = onlineConnection.queue;
+    onlineConnection = null;
+    socket.close();
+  }
+  setOnlineMode(false);
+}
+
 function chooseDifficulty(difficultyId) {
   const difficulty = difficulties.find((option) => option.id === difficultyId);
   state.campaign = {
@@ -405,6 +600,7 @@ function chooseDifficulty(difficultyId) {
     difficulty,
     opponents: shuffle(empires.filter((empire) => empire.id !== state.selectedEmpire.id)),
     opponentIndex: 0,
+    winStreak: 0,
     lastVictory: false,
   };
   startCampaignBattle();
@@ -414,8 +610,9 @@ function startCampaignBattle() {
   const campaign = state.campaign;
   if (!campaign) return;
   Object.assign(state, { started: true, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false });
-  state.player = createPlayer(campaign.playerEmpire, false, campaign.difficulty);
-  state.enemy = createPlayer(campaign.opponents[campaign.opponentIndex], true, campaign.difficulty);
+  campaign.currentDifficulty = getCampaignDifficulty(campaign);
+  state.player = createPlayer(campaign.playerEmpire, false, campaign.currentDifficulty);
+  state.enemy = createPlayer(campaign.opponents[campaign.opponentIndex], true, campaign.currentDifficulty);
   drawUntilHandSize(state.player);
   drawUntilHandSize(state.enemy);
   screens.difficulty.hidden = true;
@@ -462,7 +659,7 @@ function beginTurn(owner) {
   playSound('turn');
   drawUntilHandSize(owner);
   state.selectedAttacker = null;
-  $('#round-label').textContent = `EMPIRE ${state.campaign.opponentIndex + 1}/5 · ${roman(state.round)}`;
+  $('#round-label').textContent = `EMPIRE ${state.campaign.opponentIndex + 1}/5 · ${state.campaign.currentDifficulty.name.toUpperCase()} · STREAK ${state.campaign.winStreak}`;
   notify(owner.isAI ? `${owner.empire.name} is taking its turn` : 'Your move, commander');
   refresh();
   if (owner.isAI) window.setTimeout(runAiTurn, 650);
@@ -497,7 +694,7 @@ function makeEmpireChoice(empire, index) {
   button.style.setProperty('--faction', empire.color);
   button.setAttribute('aria-label', `Play as ${empire.name}`);
   button.innerHTML = `<span class="choice-top"><span class="choice-sigil">${empire.sigil}</span><span class="choice-number">0${index + 1}</span></span><span class="choice-name">${empire.name}</span><span class="choice-region">${empire.region}</span>`;
-  button.addEventListener('click', () => startGame(empire.id));
+  button.addEventListener('click', () => onlineSelection ? startOnlineMatch(empire.id) : startGame(empire.id));
   return button;
 }
 
@@ -707,6 +904,7 @@ function gather(owner, resource) {
 
 function gatherForPlayer(resource) {
   if (state.turn !== 'player' || state.gathered || state.busy || state.ended) return;
+  if (onlineConnection?.room) return sendOnlineAction({ type: 'gather', resource });
   gather(state.player, resource);
   state.gathered = true;
   notify(`Your stores gain 2 ${resource}.`);
@@ -716,6 +914,7 @@ function gatherForPlayer(resource) {
 function playCard(card, owner) {
   if (state.ended || state.busy || !canAfford(owner, card)) return;
   if (owner.isAI && state.turn !== 'enemy' || !owner.isAI && state.turn !== 'player') return;
+  if (onlineConnection?.room) return sendOnlineAction({ type: 'play', cardId: card.instanceId });
   if (card.kind === 'Creature' && owner.board.length >= 5) return notify('Your company is full.');
   if ((card.effect === 'rally' || card.effect === 'ward') && !owner.board.length) return notify('You need a creature on the field for that spell.');
   resourceNames.forEach((resource) => { owner.resources[resource] -= card.cost[resource]; });
@@ -770,6 +969,10 @@ function handleCreatureClick(creature, owner) {
 
 function attack(attacker, target, owner = state.player) {
   if (!attacker.canAttack || state.busy) return false;
+  if (onlineConnection?.room) {
+    playSound('attack');
+    return sendOnlineAction({ type: 'attack', attackerId: attacker.instanceId, targetId: target?.instanceId ?? null });
+  }
   state.busy = true;
   $('#end-turn').disabled = true;
   attacker.canAttack = false;
@@ -836,16 +1039,18 @@ function checkWinner() {
 function finishGame(victory) {
   state.ended = true;
   state.campaign.lastVictory = victory;
+  state.campaign.winStreak = victory ? state.campaign.winStreak + 1 : 0;
   playSound(victory ? 'win' : 'defeat');
   state.selectedAttacker = null;
   const beaten = state.campaign.opponentIndex + 1;
   const nextOpponent = state.campaign.opponents[state.campaign.opponentIndex + 1];
+  const nextDifficulty = nextOpponent ? getCampaignDifficulty(state.campaign) : null;
   $('#result-title').textContent = victory ? nextOpponent ? `${beaten} of 5 victories` : 'Campaign Complete' : 'Defeat';
   $('#result-copy').textContent = victory
     ? nextOpponent
-      ? `${state.enemy.empire.name} has fallen. ${nextOpponent.name} is the next rival.`
+      ? `${state.enemy.empire.name} has fallen. Your streak is ${state.campaign.winStreak}. ${nextOpponent.name} now fields ${nextDifficulty.enemyHealth} health and ${nextDifficulty.enemySupplies} of each supply.`
       : `${state.player.empire.name} has defeated all five rival empires and claimed the crown.`
-    : `${state.enemy.empire.name} has taken the field. Retry this empire to continue the campaign.`;
+    : `${state.enemy.empire.name} has taken the field. Your win streak resets; retry this dynasty at your chosen starting difficulty.`;
   $('#play-again').innerHTML = victory
     ? nextOpponent ? `NEXT EMPIRE: ${nextOpponent.name} <span>→</span>` : 'CHOOSE ANOTHER EMPIRE <span>→</span>'
     : 'RETRY THIS EMPIRE <span>↻</span>';
@@ -856,6 +1061,7 @@ function finishGame(victory) {
 
 function endPlayerTurn() {
   if (state.turn !== 'player' || state.busy || state.ended) return;
+  if (onlineConnection?.room) return sendOnlineAction({ type: 'end-turn' });
   state.selectedAttacker = null;
   beginTurn(state.enemy);
 }
@@ -905,7 +1111,16 @@ async function runAiTurn() {
 }
 
 function returnToSelection() {
+  if (onlineConnection?.queue) onlineConnection.queue.close();
+  if (onlineConnection?.room) onlineConnection.room.close();
+  onlineConnection = null;
+  $('#empire-grid').querySelectorAll('button').forEach((choice) => { choice.disabled = false; });
+  sessionStorage.removeItem('empires-online-match');
+  onlineSelection = false;
+  $('#online-mode-button').textContent = 'FIND AN ONLINE DUEL';
+  $('#online-status').textContent = '';
   state.ended = false;
+  state.started = false;
   state.campaign = null;
   state.selectedEmpire = null;
   $('#result-dialog').close();
@@ -942,6 +1157,10 @@ $('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, dr
 $('#empire-grid').replaceChildren(...empires.map(makeEmpireChoice));
 $('#difficulty-grid').replaceChildren(...difficulties.map(makeDifficultyChoice));
 $('#rules-button').addEventListener('click', () => $('#rules-dialog').showModal());
+$('#online-mode-button').addEventListener('click', () => {
+  if (onlineConnection?.queue) cancelOnlineSearch();
+  else setOnlineMode(!onlineSelection);
+});
 $('#difficulty-back').addEventListener('click', () => {
   screens.difficulty.hidden = true;
   screens.intro.hidden = false;
@@ -966,7 +1185,11 @@ $('#player-board').addEventListener('drop', (event) => {
   const card = state.player.hand.find((item) => item.instanceId === event.dataTransfer.getData('text/plain'));
   if (card?.kind === 'Creature') playCard(card, state.player);
 });
-$('#concede-button').addEventListener('click', () => { if (state.started && !state.ended) finishGame(false); });
+$('#concede-button').addEventListener('click', () => {
+  if (!state.started || state.ended) return;
+  if (onlineConnection?.room) sendOnlineAction({ type: 'surrender' });
+  else finishGame(false);
+});
 $('#play-again').addEventListener('click', handleCampaignResult);
 $('#enemy-hero').addEventListener('click', () => {
   if (state.turn !== 'player' || !state.selectedAttacker || state.busy) return;
@@ -986,3 +1209,15 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('resize', () => {
   if (arena.rendering) window.requestAnimationFrame(drawBattlefield);
 });
+
+const savedOnlineMatch = sessionStorage.getItem('empires-online-match');
+if (savedOnlineMatch) {
+  try {
+    const credentials = JSON.parse(savedOnlineMatch);
+    if (typeof credentials.roomId !== 'string' || typeof credentials.token !== 'string') throw new Error('Invalid saved match.');
+    connectOnlineRoom(credentials);
+  } catch {
+    sessionStorage.removeItem('empires-online-match');
+    $('#online-status').textContent = 'Could not restore the previous online match. Choose a banner to start again.';
+  }
+}

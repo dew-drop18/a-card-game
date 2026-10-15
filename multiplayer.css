@@ -1,0 +1,7 @@
+.online-entry{display:flex;min-height:44px;align-items:center;justify-content:space-between;gap:14px;padding:12px 2px}
+.online-mode-button{padding:10px 13px;border:1px solid #a44f38;background:transparent;color:#9c4c36;font-size:9px;letter-spacing:.06em;cursor:pointer}
+.online-mode-button:hover:not(:disabled){background:#f8f3e8}
+.online-mode-button:disabled{opacity:.55;cursor:wait}
+.online-mode-button span{margin-left:9px}
+#online-status{color:#777565;font:12px/1.4 var(--serif)}
+#online-status:empty{display:none}

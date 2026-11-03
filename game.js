@@ -1,10 +1,10 @@
 const empires = [
-  { id: 'british', name: 'British Empire', region: 'The Isles', color: '#a94b38', sigil: 'L', trait: 'Redoubtable Guard', spellPrefix: 'Crown', units: ['Crown Squire', 'Longbow Scout', 'Tower Guard', 'Whitecliff Knight', 'Border Rider', 'Royal Archer', 'Stonekeep Warden', 'Royal Lion', 'Red Stag Guardian', 'Crown Champion'] },
-  { id: 'mongol', name: 'Mongol Empire', region: 'The Steppe', color: '#aa7933', sigil: 'ᛟ', trait: 'Riders of the Steppe', spellPrefix: 'Steppe', units: ['Steppe Foal', 'Wind Scout', 'Keshig Guard', 'Wolf-Rider', 'Falcon Archer', 'Khanate Lancer', 'Golden Horde', 'Ordu Champion', 'Steppe Wolf', 'Golden Eagle'] },
-  { id: 'russian', name: 'Russian Empire', region: 'The North', color: '#536d52', sigil: '✥', trait: 'Keepers of the North', spellPrefix: 'Winter', units: ['Snowland Squire', 'Pinewood Scout', 'Ironwall Guard', 'Winter Knight', 'Cossack Rider', 'Frost Archer', 'Bearskin Warden', 'White Tsar', 'Brown Bear Guardian', 'White Wolf'] },
-  { id: 'qing', name: 'Qing Dynasty', region: 'The East', color: '#398078', sigil: '龍', trait: 'Jade Court', spellPrefix: 'Jade', units: ['Jade Page', 'Cloud Scout', 'Jade Dragon', 'Bannerman Knight', 'Swift Lancer', 'Silk Archer', 'Jadewall Sentinel', 'Azure General', 'Qing Lion', 'Dragon Emperor'] },
-  { id: 'spanish', name: 'Spanish Empire', region: 'The West', color: '#b28a37', sigil: '☼', trait: 'Gilded Armada', spellPrefix: 'Gilded', units: ['Castilian Page', 'Sierra Scout', 'Sunlit Guard', 'Toledo Knight', 'Conquistador', 'Crossbow Archer', 'Citadel Warden', 'Golden Hidalgo', 'Iberian Lynx', 'Sun King Champion'] },
-  { id: 'french', name: 'French Colonial', region: 'The New World', color: '#526982', sigil: '⚜', trait: 'Frontier Company', spellPrefix: 'Frontier', units: ['Frontier Page', 'River Scout', 'Fleur Guard', 'Loyalist Knight', 'Voyageur Rider', 'Forest Archer', 'Stonefort Warden', 'Marquis Champion', 'Frontier Bison', 'Great Horned Owl'] },
+  { id: 'british', name: 'British Empire', region: 'The Isles', color: '#a94b38', sigil: 'L', trait: 'Redoubtable Guard', passive: 'Each placed structure gives every creature +1 to a random attack, health, or defense stat.', spellPrefix: 'Crown', units: ['Crown Squire', 'Longbow Scout', 'Tower Guard', 'Whitecliff Knight', 'Border Rider', 'Royal Archer', 'Stonekeep Warden', 'Royal Lion', 'Red Stag Guardian', 'Crown Champion'] },
+  { id: 'mongol', name: 'Mongol Empire', region: 'The Steppe', color: '#aa7933', sigil: 'ᛟ', trait: 'Riders of the Steppe', passive: 'The creature that defeats another creature gains +2 attack until it dies.', spellPrefix: 'Steppe', units: ['Steppe Foal', 'Wind Scout', 'Keshig Guard', 'Wolf-Rider', 'Falcon Archer', 'Khanate Lancer', 'Golden Horde', 'Ordu Champion', 'Steppe Wolf', 'Golden Eagle'] },
+  { id: 'russian', name: 'Russian Empire', region: 'The North', color: '#536d52', sigil: '✥', trait: 'Keepers of the North', passive: 'At the start of your turn, heal every friendly creature by 1.', spellPrefix: 'Winter', units: ['Snowland Squire', 'Pinewood Scout', 'Ironwall Guard', 'Winter Knight', 'Cossack Rider', 'Frost Archer', 'Bearskin Warden', 'White Tsar', 'Brown Bear Guardian', 'White Wolf'] },
+  { id: 'qing', name: 'Qing Dynasty', region: 'The East', color: '#398078', sigil: '龍', trait: 'Jade Court', passive: 'Supply cards grant 1 additional supply.', spellPrefix: 'Jade', units: ['Jade Page', 'Cloud Scout', 'Jade Dragon', 'Bannerman Knight', 'Swift Lancer', 'Silk Archer', 'Jadewall Sentinel', 'Azure General', 'Qing Lion', 'Dragon Emperor'] },
+  { id: 'spanish', name: 'Spanish Empire', region: 'The West', color: '#b28a37', sigil: '☼', trait: 'Gilded Armada', passive: 'Defeating a creature grants 1 random resource; defeating a structure grants 2 random resources.', spellPrefix: 'Gilded', units: ['Castilian Page', 'Sierra Scout', 'Sunlit Guard', 'Toledo Knight', 'Conquistador', 'Crossbow Archer', 'Citadel Warden', 'Golden Hidalgo', 'Iberian Lynx', 'Sun King Champion'] },
+  { id: 'french', name: 'French Colonial', region: 'The New World', color: '#526982', sigil: '⚜', trait: 'Frontier Company', passive: 'Playing a creature, spell, and structure in one turn grants all creatures +1 attack for that turn.', spellPrefix: 'Frontier', units: ['Frontier Page', 'River Scout', 'Fleur Guard', 'Loyalist Knight', 'Voyageur Rider', 'Forest Archer', 'Stonefort Warden', 'Marquis Champion', 'Frontier Bison', 'Great Horned Owl'] },
 ];
 
 const ranks = ['Initiate', 'Vanguard', 'Veteran', 'Sentinel', 'Captain', 'Exemplar'];
@@ -18,6 +18,47 @@ const structureTypes = [
   { id: 'war-college', name: 'War College', effect: 'training', count: 5, text: 'Friendly creatures have +1 attack and +1 health while this stands.' },
 ];
 const supplyCounts = { food: 14, wood: 13, stone: 13 };
+const deckProfiles = {
+  british: { creatures: 34, spells: 12, structures: 28, supplies: { food: 8, wood: 11, stone: 7 }, strategy: 'Build a fortified formation. Structures make up the largest replacement increase, supporting steady bonuses and battlefield control.' },
+  mongol: { creatures: 39, spells: 12, structures: 21, supplies: { food: 12, wood: 9, stone: 7 }, strategy: 'Overrun the rival with creatures. This deck replaces the most supply cards with cavalry, then keeps enough spells and structures to support the attack.' },
+  russian: { creatures: 31, spells: 12, structures: 29, supplies: { food: 10, wood: 10, stone: 8 }, strategy: 'Fight an attrition campaign. Most replacement cards are structures and resilient creatures that recover over many turns.' },
+  qing: { creatures: 30, spells: 17, structures: 25, supplies: { food: 11, wood: 9, stone: 8 }, strategy: 'Control the economy with flexible spells. Most replacement cards support card advantage and battlefield manipulation.' },
+  spanish: { creatures: 33, spells: 15, structures: 24, supplies: { food: 10, wood: 8, stone: 10 }, strategy: 'Win decisive engagements. Replacement cards are balanced across creatures, spells, and structures for flexible expansion.' },
+  french: { creatures: 36, spells: 15, structures: 21, supplies: { food: 12, wood: 8, stone: 8 }, strategy: 'Mix every card type. Creatures and spells lead the replacement increase, while structures support turn-wide attack bonuses.' },
+};
+
+const dynastyTutorials = {
+  british: {
+    opening: 'Open with creatures and wood-producing play where possible, then establish at least two structures behind your company.',
+    plan: 'Place structures early to randomize permanent stat bonuses across your creatures. Protect those structures and reinforce the largest battlefield line.',
+    finish: 'Use your strengthened creatures to remove opposing units, while dense structure and creature counts create durable attacks.',
+  },
+  mongol: {
+    opening: 'Spend food aggressively and create an early mounted presence rather than holding supplies for buildings.',
+    plan: 'Attack weak creatures to trigger permanent +2 kill bonuses, then keep proven killers defended and let them accumulate bonuses.',
+    finish: 'Chain successful attacks and use the extra creature pressure to force the rival to defend rather than develop their board.',
+  },
+  russian: {
+    opening: 'Build structures while keeping several sturdy creatures in reserve for immediate board control.',
+    plan: 'Use the start-of-turn healing to preserve damaged creatures, and combine resilient units with hospitals and training structures.',
+    finish: 'Outlast the rival. Replace broken creatures slowly while structures and healing keep your surviving company dangerous.',
+  },
+  qing: {
+    opening: 'Draw spell support around your supply engine and use Qing extra supply cards to sustain several plays per turn.',
+    plan: 'Control the pace with flexible spells, healing structures, and creature removal while card advantage compounds over multiple turns.',
+    finish: 'Convert sustained resources into a final spell-and-creature burst, using spells rather than reckless direct attacks.',
+  },
+  spanish: {
+    opening: 'Use a balanced creature line and avoid wasting stone spells when a creature can safely begin accumulating kills.',
+    plan: 'Accept favorable creature trades because creature and structure victories generate random resources you can spend later.',
+    finish: 'Turn resource rewards into a flexible final force, choosing creatures, spells, or structures according to the supplies gained.',
+  },
+  french: {
+    opening: 'Aim to play one creature, one spell, and one structure in the same turn as soon as your supplies allow.',
+    plan: 'Use creatures and spells for board pressure while structures help complete mixed-turn groups and unlock the shared +1 attack.',
+    finish: 'Schedule the mixed card trio around a ready creature line, then attack during the activated turn-wide bonus.',
+  },
+};
 const dynastySpecials = {
   british: {
     creatures: ['Agincourt Longbow Company', 'New Model Army Veteran', 'Wellington’s Peninsular Rifleman', 'East India Company Sepoy', 'Royal Marine at Trafalgar'],
@@ -134,7 +175,7 @@ function buildEmpireDeck(empire) {
     }, deck.length + 1));
   });
   resourceNames.forEach((resource) => {
-    for (let index = 0; index < supplyCounts[resource]; index++) {
+    for (let index = 0; index < deckProfiles[empire.id].supplies[resource]; index++) {
       deck.push(makeCard(empire, {
         id: `supply-${resource}-${index}`,
         name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply ${String(index + 1).padStart(2, '0')}`,
@@ -152,6 +193,28 @@ function buildEmpireDeck(empire) {
         glyph: structure.effect === 'resources' ? '⌂' : structure.effect === 'healing' ? '✚' : '⚑',
         text: structure.text,
       }, deck.length + 1));
+    }
+  });
+  const profile = deckProfiles[empire.id];
+  ['Creature', 'Spell', 'Structure'].forEach((kind) => {
+    const target = (kind === 'Creature' ? profile.creatures : kind === 'Spell' ? profile.spells : profile.structures) - 5;
+    const regular = deck.filter((card) => card.kind === kind && !card.special);
+    while (regular.length < target) {
+      const template = regular[regular.length % (regular.length || 1)] || regular[0];
+      if (!template) break;
+      const copy = makeCard(empire, {
+        ...template, id: `${template.id}-copy-${regular.length + 1}`,
+        name: `${template.name} II`,
+      }, deck.length + 1);
+      deck.push(copy);
+      regular.push(copy);
+    }
+    if (regular.length > target) {
+      const keep = new Set(regular.slice(0, target));
+      for (let index = deck.length - 1; index >= 0; index--) {
+        if (deck[index].kind === kind && !deck[index].special && !keep.has(deck[index])) deck.splice(index, 1);
+        if (deck.filter((card) => card.kind === kind && !card.special).length <= target) break;
+      }
     }
   });
   const specials = dynastySpecials[empire.id];
@@ -216,7 +279,7 @@ const difficulties = [
   { id: 'painful-adventure', name: 'Painful Adventure', enemyHealth: 36, enemySupplies: 3, aiTargetChance: .65, color: '#bd6840', summary: 'Rivals begin with 36 health and 3 of each supply.' },
   { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, enemySupplies: 4, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and 4 of each supply.' },
 ];
-const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null };
+const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 let onlineSelection = false;
 let onlineConnection = null;
@@ -524,6 +587,29 @@ function drawBattlefield(time) {
   context.fillRect(0, bounds.height * .43, bounds.width, bounds.height * .14);
   context.fillStyle = '#968d6b';
   context.fillRect(0, bounds.height * .495, bounds.width, 2);
+  const weatherVisuals = {
+    drought: { top: '#c9b36f', bottom: '#aa8255', accent: '#806343' },
+    thunderstorm: { top: '#596273', bottom: '#747d88', accent: '#fff2a6' },
+    blackplague: { top: '#72734d', bottom: '#4f4d32', accent: '#b8bd62' },
+    peace: { top: '#8fb9a2', bottom: '#b8c49c', accent: '#fff0bd' },
+    winterstorm: { top: '#cbdde2', bottom: '#91aeba', accent: '#ffffff' },
+    suddenwealth: { top: '#8fa876', bottom: '#c3a85e', accent: '#ffe680' },
+  };
+  const weatherPalette = weatherVisuals[state.weather.id];
+  if (weatherPalette) {
+    context.fillStyle = weatherPalette.top;
+    context.fillRect(0, 0, bounds.width, bounds.height * .49);
+    context.fillStyle = weatherPalette.bottom;
+    context.fillRect(0, bounds.height * .51, bounds.width, bounds.height * .49);
+    context.globalAlpha = .5;
+    context.fillStyle = weatherPalette.accent;
+    for (let index = 0; index < 12; index++) {
+      const x = ((index * 83 + 31) % Math.max(1, bounds.width));
+      const y = (index * 47 + 23) % Math.max(1, bounds.height);
+      context.fillRect(x, y, state.weather.id === 'winterstorm' ? 3 : 2, state.weather.id === 'drought' ? 8 : 3);
+    }
+    context.globalAlpha = 1;
+  }
   for (let index = 0; index < 18; index++) {
     const x = ((index * 67 + 19) % Math.max(1, bounds.width));
     const y = index % 2 ? bounds.height * .18 : bounds.height * .82;
@@ -596,7 +682,7 @@ function shuffle(items) {
 function createPlayer(empire, isAI, difficulty) {
   const health = isAI ? difficulty.enemyHealth : 30;
   const supplies = isAI ? difficulty.enemySupplies : 2;
-  return { empire, isAI, health, maxHealth: health, resources: makeCost(supplies, supplies, supplies), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0 };
+  return { empire, isAI, health, maxHealth: health, resources: makeCost(supplies, supplies, supplies), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0, playedKinds: [], frenchBonusActive: false, britishStructureCount: 0 };
 }
 
 function getCampaignDifficulty(campaign) {
@@ -766,6 +852,7 @@ function renderOnlineState(match) {
   state.enemy = { ...rival, isAI: true, hand: [] };
   state.turn = match.turn === match.seat ? 'player' : 'enemy';
   state.round = match.round;
+  state.weather = match.weather || state.weather;
   state.gathered = state.turn === 'player' && match.gathered;
   state.busy = false;
   state.started = true;
@@ -845,6 +932,8 @@ function startCampaignBattle() {
   campaign.currentDifficulty = getCampaignDifficulty(campaign);
   state.player = createPlayer(campaign.playerEmpire, false, campaign.currentDifficulty);
   state.enemy = createPlayer(campaign.opponents[campaign.opponentIndex], true, campaign.currentDifficulty);
+  state.weather = { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 };
+  state.busy = false;
   drawUntilHandSize(state.player);
   drawUntilHandSize(state.enemy);
   screens.difficulty.hidden = true;
@@ -866,7 +955,7 @@ function drawCard(owner) {
   }
   const card = owner.deck.pop();
   if (card.kind === 'Resource') {
-    owner.resources[card.resource] += card.amount;
+    owner.resources[card.resource] += card.amount + (owner.empire.id === 'qing' ? 1 : 0);
     notify(`${card.name}: gained ${card.amount} ${card.resource}.`);
     playSound('resource');
   } else if (owner.hand.length < 10) {
@@ -878,16 +967,158 @@ function drawCard(owner) {
 }
 
 function drawUntilHandSize(owner, handSize = 5) {
-  while (owner.hand.length < handSize && owner.deck.length) drawCard(owner);
-  if (owner.hand.length < handSize && !owner.deck.length) drawCard(owner);
+  let attempts = 0;
+  while (owner.hand.length < handSize && owner.deck.length && attempts < 200) {
+    attempts += 1;
+    drawCard(owner);
+  }
+}
+
+const weatherTypes = [
+  { id: 'average', name: 'Average', description: 'Normal conditions', weight: 10 },
+  { id: 'drought', name: 'Drought', description: 'Creatures lose 1 temporary health', weight: 3 },
+  { id: 'thunderstorm', name: 'Thunder Storm', description: 'Buildings may be struck by lightning', weight: 2 },
+  { id: 'blackplague', name: 'Black Plague', description: 'The plague spreads through creatures', weight: 2 },
+  { id: 'peace', name: 'Peace', description: 'A random stat is temporarily strengthened', weight: 2 },
+  { id: 'winterstorm', name: 'Winter Storm', description: 'Random 1 damage strikes the field', weight: 2 },
+  { id: 'suddenwealth', name: 'Sudden Wealth', description: 'Everything heals 1 each turn', weight: 2 },
+];
+
+function rollWeather() {
+  const roll = Math.random() * weatherTypes.reduce((total, weather) => total + weather.weight, 0);
+  let accumulated = 0;
+  for (const weather of weatherTypes) {
+    accumulated += weather.weight;
+    if (roll < accumulated) return weather;
+  }
+  return weatherTypes[0];
+}
+
+function removeDeadWeatherCreatures(owner) {
+  owner.board = owner.board.filter((item) => item.kind !== 'Creature' || currentCreatureHealth(owner, item) > 0);
+}
+
+function expireWeather() {
+  [state.player, state.enemy].forEach((owner) => {
+    owner.board.forEach((card) => {
+      if (card.kind === 'Creature' && card.weatherDrought) {
+        card.health += 1;
+        delete card.weatherDrought;
+      }
+      if (card.kind === 'Creature' && card.weatherPeace) {
+        if (card.weatherPeace.health) card.health -= card.weatherPeace.health;
+        card.maxHealth = Math.max(card.maxHealth - (card.weatherPeace.health || 0), card.health);
+        delete card.weatherPeace;
+      }
+      delete card.weatherPlague;
+    });
+    removeDeadWeatherCreatures(owner);
+  });
+}
+
+function startWeather() {
+  const selected = rollWeather();
+  state.weather = { ...selected, remaining: selected.id === 'average' ? 0 : 4 };
+  if (selected.id === 'peace') {
+    const stat = ['attack', 'health', 'defense'][Math.floor(Math.random() * 3)];
+    state.weather.stat = stat;
+    [state.player, state.enemy].forEach((owner) => owner.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+      creature.weatherPeace ||= {};
+      creature.weatherPeace[stat] = (creature.weatherPeace[stat] || 0) + 1;
+      if (stat === 'health') {
+        creature.health += 1;
+        creature.maxHealth = (creature.maxHealth ?? creature.health) + 1;
+      }
+    }));
+  } else if (selected.id === 'drought') {
+    [state.player, state.enemy].forEach((owner) => owner.board.filter((card) => card.kind === 'Creature' && !card.weatherDrought).forEach((creature) => {
+      creature.health -= 1;
+      creature.weatherDrought = true;
+    }));
+  } else if (selected.id === 'blackplague') {
+    const creatures = [state.player, state.enemy].flatMap((owner) => owner.board.filter((card) => card.kind === 'Creature'));
+    if (creatures.length) creatures[Math.floor(Math.random() * creatures.length)].weatherPlague = 1;
+  }
+  [state.player, state.enemy].forEach(removeDeadWeatherCreatures);
+}
+
+function applyWeatherTurn(owner) {
+  const creatures = owner.board.filter((card) => card.kind === 'Creature');
+  if (state.weather.id === 'drought') {
+    creatures.filter((card) => !card.weatherDrought).forEach((creature) => {
+      creature.health -= 1;
+      creature.weatherDrought = true;
+    });
+  } else if (state.weather.id === 'thunderstorm') {
+    owner.board.filter((card) => card.kind === 'Structure').forEach((structure) => {
+      if (Math.random() < .35) damageCreature(structure, 99);
+    });
+  } else if (state.weather.id === 'blackplague') {
+    creatures.filter((card) => card.weatherPlague).forEach((creature) => { creature.health -= 1; });
+    const healthy = creatures.filter((card) => !card.weatherPlague);
+    if (healthy.length && creatures.some((card) => card.weatherPlague)) {
+      const infectedIndex = creatures.findIndex((card) => card.weatherPlague);
+      const adjacent = healthy
+        .map((creature) => ({ creature, distance: Math.abs(creatures.indexOf(creature) - infectedIndex) }))
+        .filter((entry) => entry.distance === 1)
+        .sort((left, right) => left.distance - right.distance);
+      const candidates = adjacent.length ? adjacent.map((entry) => entry.creature) : healthy;
+      candidates[Math.floor(Math.random() * candidates.length)].weatherPlague = 1;
+    }
+  } else if (state.weather.id === 'winterstorm') {
+    owner.board.forEach((card) => {
+      if (Math.random() < .5) damageCreature(card, 1);
+    });
+  } else if (state.weather.id === 'suddenwealth') {
+    owner.board.forEach((card) => {
+      const maxHealth = card.maxHealth ?? card.health;
+      if (card.health < maxHealth) card.health += 1;
+    });
+  }
+  removeDeadWeatherCreatures(owner);
+}
+
+function advanceWeather(owner) {
+  if (state.weather.remaining > 0) {
+    applyWeatherTurn(owner);
+    state.weather.remaining -= 1;
+    if (state.weather.remaining === 0) {
+      expireWeather();
+      startWeather();
+    }
+  } else if (state.weather.id === 'average') {
+    startWeather();
+  }
+  updateWeatherDisplay();
+}
+
+function updateWeatherDisplay() {
+  const banner = $('#weather-banner');
+  if (!banner) return;
+  const weather = state.weather;
+  const active = weather.id !== 'average';
+  banner.classList.toggle('hidden', !active);
+  $('#weather-name').textContent = weather.name.toUpperCase();
+  $('#weather-description').textContent = weather.description;
+  $('#weather-turns').textContent = active ? `${Math.ceil(weather.remaining / 2)} PLAYER CYCLES LEFT` : '';
+  $('#pixel-battlefield').parentElement.className = `battlefield-stage weather-${weather.id.replace('thunderstorm', 'thunderstorm')}`;
 }
 
 function beginTurn(owner) {
   if (state.ended) return;
+  state.busy = false;
   state.turn = owner.isAI ? 'enemy' : 'player';
   state.round += owner.isAI ? 0 : 1;
   state.gathered = false;
+  advanceWeather(owner);
   owner.board.forEach((creature) => { creature.canAttack = true; creature.bonusAttack = 0; });
+  owner.playedKinds = [];
+  owner.frenchBonusActive = false;
+  if (owner.empire.id === 'russian') {
+    owner.board.filter((creature) => creature.kind === 'Creature').forEach((creature) => {
+      creature.health = Math.min(creature.maxHealth ?? creature.health, creature.health + 1);
+    });
+  }
   const turnEffects = applyStructureTurnEffects(owner);
   playSound('turn');
   drawUntilHandSize(owner);
@@ -928,11 +1159,72 @@ function currentCreatureHealth(owner, creature) {
 }
 
 function creatureAttack(owner, creature) {
-  return creature.attack + (creature.bonusAttack || 0) + getStructureBonus(owner);
+  return creature.attack + (creature.bonusAttack || 0) + (creature.weatherPeace?.attack || 0) + (owner.empire.id === 'mongol' ? creature.killBonusAttack || 0 : 0) + getStructureBonus(owner) + (creature.britishStats?.attack || 0) + (owner.empire.id === 'mongol' && creature.mounted ? 1 : 0);
+}
+
+function creatureDefense(owner, creature) {
+  return (creature.defense || 0) + (creature.weatherPeace?.defense || 0) + (creature.britishStats?.defense || 0);
+}
+
+function randomBritishBonus(owner) {
+  const stat = ['attack', 'health', 'defense'][Math.floor(Math.random() * 3)];
+  owner.board.filter((creature) => creature.kind === 'Creature').forEach((creature) => {
+    creature.britishStats ||= { attack: 0, health: 0, defense: 0 };
+    creature.britishStats[stat] += 1;
+    if (stat === 'health') {
+      creature.health += 1;
+      creature.maxHealth += 1;
+    }
+  });
 }
 
 function roman(number) { return ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][Math.min(number, 10)]; }
 function factionStyle(empire) { return `--faction:${empire.color}`; }
+
+function showTutorial(empireId = 'british') {
+  const empire = empires.find((item) => item.id === empireId);
+  const profile = deckProfiles[empireId];
+  const guide = dynastyTutorials[empireId];
+  const supplyTotal = Object.values(profile.supplies).reduce((total, count) => total + count, 0);
+  const specialCards = dynastySpecials[empireId];
+  document.querySelectorAll('.tutorial-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.empire === empireId);
+  });
+  $('#tutorial-content').innerHTML = `<h3>${empire.name} — ${empire.region}</h3>
+    <div class="tutorial-passive" style="--faction:${empire.color}">
+      <span class="tutorial-passive-name">${empire.trait}</span>
+      <strong>PASSIVE ABILITY</strong>
+      <span>${empire.passive}</span>
+    </div>
+    <div class="tutorial-stats">
+      <span><b>${profile.creatures}</b>CREATURES</span>
+      <span><b>${profile.spells}</b>SPELLS</span>
+      <span><b>${profile.structures}</b>STRUCTURES</span>
+      <span><b>${supplyTotal}</b>SUPPLIES</span>
+    </div>
+    <p><b>Historical focus:</b> ${profile.strategy}</p>
+    <p><b>Supplies:</b> ${profile.supplies.food} food, ${profile.supplies.wood} wood, ${profile.supplies.stone} stone. Each deck also includes 15 empire-specific cards: 5 creatures, 5 spells, and 5 structures.</p>
+    <div class="tutorial-guide-grid">
+      <p><b>Opening</b><br>${guide.opening}</p>
+      <p><b>Midgame plan</b><br>${guide.plan}</p>
+      <p><b>Finishing strategy</b><br>${guide.finish}</p>
+      <p><b>Deck balance</b><br>${profile.creatures} creatures + ${profile.spells} spells + ${profile.structures} structures + ${supplyTotal} supplies = 100 cards.</p>
+    </div>
+    <p class="tutorial-specials"><b>Empire cards:</b> ${specialCards.creatures.join(', ')}; ${specialCards.spells.join(', ')}; and ${specialCards.structures.join(', ')}.</p>`;
+}
+
+function initializeTutorial() {
+  $('#tutorial-tabs').replaceChildren(...empires.map((empire) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tutorial-tab';
+    button.dataset.empire = empire.id;
+    button.textContent = empire.name;
+    button.addEventListener('click', () => showTutorial(empire.id));
+    return button;
+  }));
+  showTutorial();
+}
 
 function applyEmpireTheme() {
   const battleScreen = $('#battle-screen');
@@ -1115,19 +1407,19 @@ function makePixelArt(card, compact = false) {
       rect(7, 5, '#df4d44', 2, 5);
       rect(5, 7, '#df4d44', 6, 2);
       rect(5, 5, gold); rect(10, 5, gold);
-      rect(4, 10, color); rect(11, 10, color);
+      rect(4, 10, sky); rect(11, 10, sky);
     } else {
       drawRows(['...DDDDDDDD...', '..DCCCCCCCCD..', '.DCCCCCCCCCCD.', '.DCCCDCCCCCCD.', '.DCCCCCCCCCCD.', '..DDDDDDDDDD..', '....D....D....', '....D....D....'], { D: shadow, C: '#a99b7f' }, 2);
       rect(6, 5, gold, 1, 4); rect(9, 5, gold, 1, 4);
-      rect(7, 6, color, 2, 3);
-      rect(7, 4, color); rect(8, 4, color);
+      rect(7, 6, sky, 2, 3);
+      rect(7, 4, sky); rect(8, 4, sky);
       rect(4, 10, shadow); rect(11, 10, shadow);
     }
     rect(3, 10, shadow); rect(12, 10, shadow);
     rect(4, 11, '#d7c78b', 8, 1);
     if (card.special) {
       rect(7, 0, gold, 2, 1);
-      rect(8, 1, color, 1, 2);
+      rect(8, 1, sky, 1, 2);
       rect(9, 1, gold, 2, 1);
     }
     [[7, 12, light], [10, 15, gold], [13, 18, shadow], [18, 12, light], [22, 16, gold], [25, 19, shadow]].forEach(([x, y, color]) => detailPixel(x, y, color));
@@ -1213,7 +1505,7 @@ function makeBoardCard(creature, owner) {
   const isStructure = creature.kind === 'Structure';
   const health = isStructure ? creature.health : currentCreatureHealth(owner, creature);
   const attack = isStructure ? null : creatureAttack(owner, creature);
-  button.className = `board-card${!isStructure && !creature.canAttack ? ' sleeping' : ''}${isStructure ? ' structure-board-card' : ''}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}`;
+  button.className = `board-card${!isStructure && !creature.canAttack ? ' sleeping' : ''}${isStructure ? ' structure-board-card' : ''}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}${creature.weatherDrought ? ' weather-drought-card' : ''}${creature.weatherPlague ? ' weather-plague-card' : ''}${creature.weatherPeace ? ' weather-peace-card' : ''}`;
   button.style.cssText = factionStyle(creature.empire);
   button.dataset.cardInstance = creature.instanceId;
   button.setAttribute('aria-label', isStructure
@@ -1257,6 +1549,7 @@ function renderResources(owner, targetSelector) {
 
 function refresh() {
   if (!state.started) return;
+  updateWeatherDisplay();
   for (const [owner, prefix] of [[state.player, 'player'], [state.enemy, 'enemy']]) {
     $(`#${prefix}-health`).textContent = Math.max(0, owner.health);
     $(`#${prefix}-health-bar`).style.width = `${Math.max(0, Math.min(100, owner.health / owner.maxHealth * 100))}%`;
@@ -1301,16 +1594,50 @@ function playCard(card, owner) {
   resourceNames.forEach((resource) => { owner.resources[resource] -= card.cost[resource]; });
   owner.hand = owner.hand.filter((item) => item.instanceId !== card.instanceId);
   if (card.kind === 'Creature') {
-    owner.board.push({ ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0 });
+    const britishStats = owner.empire.id === 'british' ? { attack: 0, health: 0, defense: 0 } : undefined;
+    owner.board.push({ ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0, britishStats });
+      const creature = owner.board[owner.board.length - 1];
+      if (state.weather.id === 'drought') {
+        creature.health -= 1;
+        creature.weatherDrought = true;
+      } else if (state.weather.id === 'peace') {
+        creature.weatherPeace = { [state.weather.stat]: 1 };
+        if (state.weather.stat === 'health') {
+          creature.health += 1;
+          creature.maxHealth += 1;
+        }
+      }
+    if (britishStats) {
+      for (let bonus = 0; bonus < owner.britishStructureCount; bonus++) {
+        const stat = ['attack', 'health', 'defense'][Math.floor(Math.random() * 3)];
+        britishStats[stat] += 1;
+        if (stat === 'health') {
+          const creature = owner.board[owner.board.length - 1];
+          creature.health += 1;
+          creature.maxHealth += 1;
+        }
+      }
+    }
     playSound('play');
     notify(`${card.name} joins ${owner.isAI ? 'the rival' : 'your'} company.`);
   } else if (card.kind === 'Structure') {
     owner.board.push({ ...card });
+    if (owner.empire.id === 'british') {
+      owner.britishStructureCount += 1;
+      randomBritishBonus(owner);
+    }
     playSound('play');
     notify(`${card.name} is built on ${owner.isAI ? 'the rival' : 'your'} battlefield.`);
   } else {
     playSound('spell');
     applySpell(card, owner);
+  }
+  if (owner.empire.id === 'french' && ['Creature', 'Spell', 'Structure'].includes(card.kind)) {
+    owner.playedKinds.push(card.kind);
+    if (!owner.frenchBonusActive && ['Creature', 'Spell', 'Structure'].every((kind) => owner.playedKinds.includes(kind))) {
+      owner.board.filter((creature) => creature.kind === 'Creature').forEach((creature) => { creature.bonusAttack = (creature.bonusAttack || 0) + 1; });
+      owner.frenchBonusActive = true;
+    }
   }
   refresh();
   checkWinner();
@@ -1337,13 +1664,15 @@ function applySpell(card, caster) {
 
 function damageCreature(creature, amount) {
   if (!creature) return;
-  creature.health -= Math.max(1, amount - (creature.defense || 0));
   const owner = [state.player, state.enemy].find((player) => player.board.includes(creature));
+  creature.health -= Math.max(1, amount - (owner ? creatureDefense(owner, creature) : (creature.defense || 0)));
   if (owner && (creature.kind === 'Structure' ? creature.health <= 0 : currentCreatureHealth(owner, creature) <= 0)) {
     owner.board = owner.board.filter((item) => item.instanceId !== creature.instanceId);
     notify(`${creature.name} leaves the field.`);
     if (creature.kind === 'Structure') owner.board = owner.board.filter((item) => item.kind !== 'Creature' || currentCreatureHealth(owner, item) > 0);
+    return true;
   }
+  return false;
 }
 
 function handleCreatureClick(creature, owner) {
@@ -1392,8 +1721,15 @@ function attack(attacker, target, owner = state.player) {
       const retaliation = target.kind === 'Structure' ? 0 : creatureAttack(rival, target);
       const dealt = Math.max(1, strength - (target.defense || 0));
           const received = target.kind === 'Structure' ? 0 : Math.max(1, retaliation - attacker.defense);
-      damageCreature(target, strength);
+      const targetDefeated = damageCreature(target, strength);
       if (owner.board.includes(attacker) && retaliation) damageCreature(attacker, retaliation);
+      if (targetDefeated && owner.empire.id === 'mongol') attacker.killBonusAttack = (attacker.killBonusAttack || 0) + 2;
+      if (targetDefeated && owner.empire.id === 'spanish') {
+        const rewards = target.kind === 'Structure' ? 2 : 1;
+        for (let reward = 0; reward < rewards; reward++) {
+          owner.resources[resourceNames[Math.floor(Math.random() * resourceNames.length)]] += 1;
+        }
+      }
       const attackerSurvives = owner.board.includes(attacker);
       const targetSurvives = rival.board.includes(target);
       if (attackerSurvives && !targetSurvives) result = `${attacker.name} wins the clash!`;
@@ -1454,9 +1790,12 @@ function finishGame(victory) {
 }
 
 function endPlayerTurn() {
-  if (state.turn !== 'player' || state.busy || state.ended) return;
+  if (state.turn !== 'player' || state.ended) return;
   if (onlineConnection?.room) return sendOnlineAction({ type: 'end-turn' });
   state.selectedAttacker = null;
+  state.busy = false;
+  state.turn = 'enemy';
+  refresh();
   beginTurn(state.enemy);
 }
 
@@ -1466,6 +1805,7 @@ function waitFor(milliseconds) { return new Promise((resolve) => window.setTimeo
 async function runAiTurn() {
   if (state.ended) return;
   const enemy = state.enemy;
+  state.busy = false;
   await waitFor(450);
   if (state.ended) return;
   if (!state.gathered) {
@@ -1505,7 +1845,9 @@ async function runAiTurn() {
   await waitFor(550);
   if (state.ended) return;
   refresh();
-  if (!checkWinner()) window.setTimeout(() => beginTurn(state.player), 500);
+  if (!checkWinner()) {
+    window.setTimeout(() => beginTurn(state.player), 500);
+  }
 }
 
 function returnToSelection() {
@@ -1552,9 +1894,11 @@ function makeDifficultyChoice(option, index) {
   return button;
 }
 
-$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Each 100-card deck has 40 supply cards, 30 creatures, 10 spells, and 20 structures, including 15 empire-specific special cards. Supply cards grant 2 resources when drawn.';
+$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Every dynasty has a 100-card deck, but each history-inspired composition balances creatures, spells, structures, supplies, and 15 empire-special cards differently. Supply cards grant 2 resources when drawn.';
 $('#empire-grid').replaceChildren(...empires.map(makeEmpireChoice));
 $('#difficulty-grid').replaceChildren(...difficulties.map(makeDifficultyChoice));
+initializeTutorial();
+$('#tutorial-button').addEventListener('click', () => $('#tutorial-dialog').showModal());
 $('#rules-button').addEventListener('click', () => $('#rules-dialog').showModal());
 $('#online-mode-button').addEventListener('click', () => {
   if (onlineConnection?.queue) cancelOnlineSearch();

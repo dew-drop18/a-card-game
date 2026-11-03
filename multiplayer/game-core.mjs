@@ -8,6 +8,15 @@ export const empires = [
 ];
 
 const resourceNames = ['food', 'wood', 'stone'];
+const weatherTypes = [
+  { id: 'average', name: 'Average', description: 'Normal conditions', weight: 10 },
+  { id: 'drought', name: 'Drought', description: 'Creatures lose 1 temporary health', weight: 3 },
+  { id: 'thunderstorm', name: 'Thunder Storm', description: 'Buildings may be struck by lightning', weight: 2 },
+  { id: 'blackplague', name: 'Black Plague', description: 'The plague spreads through creatures', weight: 2 },
+  { id: 'peace', name: 'Peace', description: 'A random stat is temporarily strengthened', weight: 2 },
+  { id: 'winterstorm', name: 'Winter Storm', description: 'Random 1 damage strikes the field', weight: 2 },
+  { id: 'suddenwealth', name: 'Sudden Wealth', description: 'Everything heals 1 each turn', weight: 2 },
+];
 const ranks = ['Initiate', 'Vanguard', 'Veteran', 'Sentinel', 'Captain', 'Exemplar'];
 const spellNames = ['Rations from Home', 'Timberwrights', 'Stonecutters', 'Field Medicine', 'Flaming Volley', 'Rallying Cry', 'Reinforced Harness', 'Quartermaster’s Gift', 'Storm the Ramparts', 'Supply Caravan'];
 const spellRanks = ['Minor', 'Swift', 'Proven', 'Grand'];
@@ -26,6 +35,14 @@ const structureTypes = [
   { id: 'war-college', name: 'War College', effect: 'training', count: 5, text: 'Friendly creatures have +1 attack and +1 health while this stands.' },
 ];
 const supplyCounts = { food: 14, wood: 13, stone: 13 };
+const deckProfiles = {
+  british: { creatures: 34, spells: 12, structures: 28, supplies: { food: 8, wood: 11, stone: 7 }, strategy: 'Build a fortified formation with extra structures and creature bonuses.' },
+  mongol: { creatures: 39, spells: 12, structures: 21, supplies: { food: 12, wood: 9, stone: 7 }, strategy: 'Overrun the rival with the largest creature increase in the replacement profile.' },
+  russian: { creatures: 31, spells: 12, structures: 29, supplies: { food: 10, wood: 10, stone: 8 }, strategy: 'Use extra structures and healing for a long attrition battle.' },
+  qing: { creatures: 30, spells: 17, structures: 25, supplies: { food: 11, wood: 9, stone: 8 }, strategy: 'Use the largest spell increase to control card advantage and battlefield actions.' },
+  spanish: { creatures: 33, spells: 15, structures: 24, supplies: { food: 10, wood: 8, stone: 10 }, strategy: 'Use balanced replacements to convert victories into supplies and flexible options.' },
+  french: { creatures: 36, spells: 15, structures: 21, supplies: { food: 12, wood: 8, stone: 8 }, strategy: 'Use creatures and spells to mix card types and activate the shared attack bonus.' },
+};
 const dynastySpecials = {
   british: {
     creatures: ['Agincourt Longbow Company', 'New Model Army Veteran', 'Wellington’s Peninsular Rifleman', 'East India Company Sepoy', 'Royal Marine at Trafalgar'],
@@ -138,7 +155,7 @@ export function buildEmpireDeck(empire, random = Math.random) {
     }, deck.length + 1));
   });
   resourceNames.forEach((resource) => {
-    for (let index = 0; index < supplyCounts[resource]; index++) {
+    for (let index = 0; index < deckProfiles[empire.id].supplies[resource]; index++) {
       deck.push(makeCard(empire, {
         id: `supply-${resource}-${index}`,
         name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply ${String(index + 1).padStart(2, '0')}`,
@@ -156,6 +173,28 @@ export function buildEmpireDeck(empire, random = Math.random) {
         glyph: structure.effect === 'resources' ? '⌂' : structure.effect === 'healing' ? '✚' : '⚑',
         text: structure.text,
       }, deck.length + 1));
+    }
+  });
+  const profile = deckProfiles[empire.id];
+  ['Creature', 'Spell', 'Structure'].forEach((kind) => {
+    const target = (kind === 'Creature' ? profile.creatures : kind === 'Spell' ? profile.spells : profile.structures) - 5;
+    const regular = deck.filter((card) => card.kind === kind && !card.special);
+    while (regular.length < target) {
+      const template = regular[regular.length % regular.length];
+      if (!template) break;
+      const copy = makeCard(empire, {
+        ...template, id: `${template.id}-copy-${regular.length + 1}`,
+        name: `${template.name} II`,
+      }, deck.length + 1);
+      deck.push(copy);
+      regular.push(copy);
+    }
+    if (regular.length > target) {
+      const keep = new Set(regular.slice(0, target));
+      for (let index = deck.length - 1; index >= 0; index--) {
+        if (deck[index].kind === kind && !keep.has(deck[index])) deck.splice(index, 1);
+        if (deck.filter((card) => card.kind === kind).length <= target) break;
+      }
     }
   });
   const specials = dynastySpecials[empire.id];
@@ -214,7 +253,7 @@ function drawCard(player) {
     return;
   }
   const card = player.deck.pop();
-  if (card.kind === 'Resource') player.resources[card.resource] += card.amount;
+  if (card.kind === 'Resource') player.resources[card.resource] += card.amount + (player.empire.id === 'qing' ? 1 : 0);
   else if (player.hand.length < 10) player.hand.push(card);
 }
 
@@ -231,7 +270,7 @@ function makePlayer(empireId, seat, random) {
   const player = {
     empire, health: 30, maxHealth: 30,
     resources: makeCost(2, 2, 2),
-    deck, hand: [], board: [], fatigue: 0,
+    deck, hand: [], board: [], fatigue: 0, britishStructureCount: 0,
   };
   drawToFive(player);
   return player;
@@ -240,7 +279,7 @@ function makePlayer(empireId, seat, random) {
 export function createGame(empireIds, random = Math.random) {
   if (!Array.isArray(empireIds) || empireIds.length !== 2) throw new Error('A match needs two empires.');
   const players = empireIds.map((id, seat) => makePlayer(id, seat, random));
-  return { players, turn: 0, round: 1, gathered: false, finished: null, version: 0 };
+  return { players, turn: 0, round: 1, gathered: false, finished: null, version: 0, random, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
 }
 
 function trainingBonus(player) {
@@ -252,7 +291,27 @@ function effectiveCreatureHealth(player, creature) {
 }
 
 function creatureAttack(player, creature) {
-  return creature.attack + (creature.bonusAttack || 0) + trainingBonus(player);
+  return creature.attack + (creature.bonusAttack || 0) + (creature.weatherPeace?.attack || 0) + (player.empire.id === 'mongol' ? creature.killBonusAttack || 0 : 0) + trainingBonus(player) + (creature.britishStats?.attack || 0) + (player.empire.id === 'mongol' && creature.mounted ? 1 : 0);
+}
+
+function creatureDefense(player, creature) {
+  return (creature.defense || 0) + (creature.weatherPeace?.defense || 0) + (creature.britishStats?.defense || 0);
+}
+
+function randomResource(player, random, count = 1) {
+  for (let index = 0; index < count; index++) player.resources[resourceNames[Math.floor(random() * resourceNames.length)]] += 1;
+}
+
+function randomBritishBonus(player, random) {
+  const stat = ['attack', 'health', 'defense'][Math.floor(random() * 3)];
+  player.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+    creature.britishStats ||= { attack: 0, health: 0, defense: 0 };
+    creature.britishStats[stat] += 1;
+    if (stat === 'health') {
+      creature.health += 1;
+      creature.maxHealth = (creature.maxHealth ?? creature.health) + 1;
+    }
+  });
 }
 
 function removeDeadCreatures(player) {
@@ -260,13 +319,14 @@ function removeDeadCreatures(player) {
 }
 
 function dealDamage(player, creature, amount) {
-  creature.health -= Math.max(1, amount - (creature.defense || 0));
+  creature.health -= Math.max(1, amount - creatureDefense(player, creature));
   const defeated = creature.kind === 'Structure'
     ? creature.health <= 0
     : effectiveCreatureHealth(player, creature) <= 0;
-  if (!defeated) return;
+  if (!defeated) return false;
   player.board = player.board.filter((item) => item.instanceId !== creature.instanceId);
   if (creature.kind === 'Structure') removeDeadCreatures(player);
+  return true;
 }
 
 function checkFinished(game) {
@@ -307,6 +367,135 @@ function applyStructureTurnEffects(player) {
   }
 }
 
+function applyDynastyTurnEffects(player) {
+  if (player.empire.id !== 'russian') return;
+  player.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+    creature.health = Math.min(creature.maxHealth ?? creature.health, creature.health + 1);
+  });
+}
+
+function applyFrenchBonus(player) {
+  if (player.empire.id === 'french' && !player.frenchBonusActive && ['Creature', 'Spell', 'Structure'].every((kind) => player.playedKinds.includes(kind))) {
+    player.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+      creature.bonusAttack = (creature.bonusAttack || 0) + 1;
+    });
+    player.frenchBonusActive = true;
+  }
+}
+
+function pickWeather(random) {
+  const roll = random() * weatherTypes.reduce((total, weather) => total + weather.weight, 0);
+  let accumulated = 0;
+  for (const weather of weatherTypes) {
+    accumulated += weather.weight;
+    if (roll < accumulated) return weather;
+  }
+  return weatherTypes[0];
+}
+
+function removeWeatherBuffs(player) {
+  player.board.forEach((card) => {
+    if (card.kind === 'Creature' && card.weatherDrought) {
+      card.health += 1;
+      card.maxHealth = Math.max(card.maxHealth ?? card.health, card.health);
+      delete card.weatherDrought;
+    }
+    if (card.kind === 'Creature' && card.weatherPeace) {
+      if (card.weatherPeace.health) {
+        card.health -= card.weatherPeace.health;
+        card.maxHealth -= card.weatherPeace.health;
+      }
+      delete card.weatherPeace;
+    }
+    delete card.weatherPlague;
+  });
+}
+
+function startWeather(game) {
+  const selected = pickWeather(game.random || Math.random);
+  game.weather = { ...selected, remaining: selected.id === 'average' ? 0 : 4 };
+  if (selected.id === 'peace') {
+    const stat = ['attack', 'health', 'defense'][Math.floor((game.random || Math.random)() * 3)];
+    game.weather.stat = stat;
+    game.players.forEach((player) => player.board.filter((card) => card.kind === 'Creature').forEach((creature) => {
+      creature.weatherPeace ||= {};
+      creature.weatherPeace[stat] = (creature.weatherPeace[stat] || 0) + 1;
+      if (stat === 'health') {
+        creature.health += 1;
+        creature.maxHealth += 1;
+      }
+    }));
+  } else if (selected.id === 'drought') {
+    game.players.forEach((player) => player.board.filter((card) => card.kind === 'Creature' && !card.weatherDrought).forEach((creature) => {
+      creature.health -= 1;
+      creature.weatherDrought = true;
+    }));
+  } else if (selected.id === 'blackplague') {
+    const creatures = game.players.flatMap((player) => player.board.filter((card) => card.kind === 'Creature'));
+    if (creatures.length) creatures[Math.floor((game.random || Math.random)() * creatures.length)].weatherPlague = 1;
+  }
+  removeDeadCreatures(game.players[0]);
+  removeDeadCreatures(game.players[1]);
+}
+
+function expireWeather(game) {
+  game.players.forEach(removeWeatherBuffs);
+  removeDeadCreatures(game.players[0]);
+  removeDeadCreatures(game.players[1]);
+}
+
+function applyWeatherTurn(game, player) {
+  const weather = game.weather;
+  if (!weather || weather.id === 'average') return;
+  if (weather.id === 'drought') {
+    player.board.filter((card) => card.kind === 'Creature' && !card.weatherDrought).forEach((creature) => {
+      creature.health -= 1;
+      creature.weatherDrought = true;
+    });
+  } else if (weather.id === 'thunderstorm') {
+    player.board.filter((card) => card.kind === 'Structure').forEach((structure) => {
+      if ((game.random || Math.random)() < .35) dealDamage(player, structure, 99);
+    });
+  } else if (weather.id === 'blackplague') {
+    const creatures = player.board.filter((card) => card.kind === 'Creature');
+    creatures.filter((card) => card.weatherPlague).forEach((creature) => {
+      creature.health -= 1;
+    });
+    const healthy = creatures.filter((card) => !card.weatherPlague);
+    if (healthy.length && creatures.some((card) => card.weatherPlague)) {
+      const infectedIndex = creatures.findIndex((card) => card.weatherPlague);
+      const adjacent = healthy.filter((creature) => {
+        const creatureIndex = creatures.indexOf(creature);
+        return creatureIndex === infectedIndex - 1 || creatureIndex === infectedIndex + 1;
+      });
+      const candidates = adjacent.length ? adjacent : healthy;
+      candidates[Math.floor((game.random || Math.random)() * candidates.length)].weatherPlague = 1;
+    }
+  } else if (weather.id === 'winterstorm') {
+    player.board.forEach((card) => {
+      if ((game.random || Math.random)() < .5) dealDamage(player, card, 1);
+    });
+  } else if (weather.id === 'suddenwealth') {
+    player.board.forEach((card) => {
+      if (card.health < (card.maxHealth ?? card.health)) card.health += 1;
+    });
+  }
+  removeDeadCreatures(player);
+}
+
+function advanceWeather(game, nextPlayer) {
+  if (game.weather?.remaining > 0) {
+    applyWeatherTurn(game, nextPlayer);
+    game.weather.remaining -= 1;
+    if (game.weather.remaining === 0) {
+      expireWeather(game);
+      startWeather(game);
+    }
+  } else if (game.weather?.id === 'average') {
+    startWeather(game);
+  }
+}
+
 export function applyAction(game, seat, action) {
   if (!Number.isInteger(seat) || seat < 0 || seat > 1) throw new Error('Invalid player seat.');
   if (game.finished) throw new Error('This match has ended.');
@@ -330,9 +519,44 @@ export function applyAction(game, seat, action) {
     if ((card.effect === 'rally' || card.effect === 'ward') && !player.board.some((item) => item.kind === 'Creature')) throw new Error('You need a creature on the field for that spell.');
     resourceNames.forEach((resource) => { player.resources[resource] -= card.cost[resource]; });
     player.hand.splice(index, 1);
-    if (card.kind === 'Creature') player.board.push({ ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0 });
-    else if (card.kind === 'Structure') player.board.push({ ...card });
+    if (card.kind === 'Creature') {
+      const britishStats = player.empire.id === 'british' ? { attack: 0, health: 0, defense: 0 } : undefined;
+      const creature = { ...card, maxHealth: card.health, canAttack: false, bonusAttack: 0, britishStats };
+      if (britishStats) {
+        for (let bonus = 0; bonus < player.britishStructureCount; bonus++) {
+          const stat = ['attack', 'health', 'defense'][Math.floor(game.random() * 3)];
+          britishStats[stat] += 1;
+          if (stat === 'health') {
+            creature.health += 1;
+            creature.maxHealth += 1;
+          }
+        }
+      }
+      if (game.weather?.id === 'drought') {
+        creature.health -= 1;
+        creature.weatherDrought = true;
+      } else if (game.weather?.id === 'peace') {
+        creature.weatherPeace = { [game.weather.stat]: 1 };
+        if (game.weather.stat === 'health') {
+          creature.health += 1;
+          creature.maxHealth += 1;
+        }
+      }
+      player.board.push(creature);
+    }
+    else if (card.kind === 'Structure') {
+      player.board.push({ ...card });
+      if (player.empire.id === 'british') {
+        player.britishStructureCount += 1;
+        randomBritishBonus(player, game.random || Math.random);
+      }
+    }
     else applySpell(card, player, rival);
+    if (['Creature', 'Spell', 'Structure'].includes(card.kind)) {
+      player.playedKinds ||= [];
+      player.playedKinds.push(card.kind);
+      applyFrenchBonus(player);
+    }
   } else if (action.type === 'attack') {
     if (typeof action.attackerId !== 'string') throw new Error('Choose a creature to attack with.');
     const attacker = player.board.find((card) => card.instanceId === action.attackerId);
@@ -344,8 +568,10 @@ export function applyAction(game, seat, action) {
     const strength = creatureAttack(player, attacker);
     if (target) {
       const retaliation = target.kind === 'Structure' ? 0 : creatureAttack(rival, target);
-      dealDamage(rival, target, strength);
+      const targetDefeated = dealDamage(rival, target, strength);
       if (retaliation) dealDamage(player, attacker, retaliation);
+      if (targetDefeated && player.empire.id === 'mongol') attacker.killBonusAttack = (attacker.killBonusAttack || 0) + 2;
+      if (targetDefeated && player.empire.id === 'spanish') randomResource(player, game.random || Math.random, target.kind === 'Structure' ? 2 : 1);
     } else rival.health -= strength;
   } else if (action.type === 'end-turn') {
     game.turn = 1 - seat;
@@ -353,7 +579,11 @@ export function applyAction(game, seat, action) {
     game.gathered = false;
     const nextPlayer = game.players[game.turn];
     nextPlayer.board.filter((creature) => creature.kind !== 'Structure').forEach((creature) => { creature.canAttack = true; creature.bonusAttack = 0; });
+    nextPlayer.playedKinds = [];
+    nextPlayer.frenchBonusActive = false;
     applyStructureTurnEffects(nextPlayer);
+    applyDynastyTurnEffects(nextPlayer);
+    advanceWeather(game, nextPlayer);
     drawToFive(nextPlayer);
   } else if (action.type === 'surrender') {
     game.finished = { winner: 1 - seat, reason: 'surrender' };
@@ -373,6 +603,7 @@ export function playerView(game, seat) {
     gathered: game.gathered,
     version: game.version,
     finished: game.finished,
+    weather: game.weather,
     players: game.players.map((player, index) => ({
       empire: player.empire,
       health: player.health,

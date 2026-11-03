@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyAction, buildEmpireDeck, createGame, empires, playerView } from './game-core.mjs';
 
-const fixedRandom = () => 0.5;
+const fixedRandom = () => 0;
 
 test('each empire starts with a shuffled 100-card deck and a five-card hand', () => {
   for (const empire of empires) {
@@ -10,10 +10,10 @@ test('each empire starts with a shuffled 100-card deck and a five-card hand', ()
     const deck = buildEmpireDeck(empire, fixedRandom);
     assert.equal(deck.length, 100);
     assert.equal(new Set(deck.map((card) => card.instanceId)).size, 100);
-    assert.equal(deck.filter((card) => card.kind === 'Creature').length, 30);
-    assert.equal(deck.filter((card) => card.kind === 'Spell').length, 10);
-    assert.equal(deck.filter((card) => card.kind === 'Structure').length, 20);
-    assert.equal(deck.filter((card) => card.kind === 'Resource').length, 40);
+    assert.equal(deck.filter((card) => card.kind === 'Creature').length, { british: 34, mongol: 39, russian: 31, qing: 30, spanish: 33, french: 36 }[empire.id]);
+    assert.equal(deck.filter((card) => card.kind === 'Spell').length, { british: 12, mongol: 12, russian: 12, qing: 17, spanish: 15, french: 15 }[empire.id]);
+    assert.equal(deck.filter((card) => card.kind === 'Structure').length, { british: 28, mongol: 21, russian: 29, qing: 25, spanish: 24, french: 21 }[empire.id]);
+    assert.equal(deck.filter((card) => card.kind === 'Resource').length, empire.id === 'british' ? 26 : 28);
     const specials = deck.filter((card) => card.special);
     assert.equal(specials.length, 15);
     assert.equal(specials.filter((card) => card.kind === 'Creature').length, 5);
@@ -155,4 +155,22 @@ test('surrender ends the duel for the opposing seat', () => {
   applyAction(game, 1, { type: 'surrender' });
   assert.deepEqual(game.finished, { winner: 0, reason: 'surrender' });
   assert.throws(() => applyAction(game, 0, { type: 'end-turn' }), /match has ended/);
+});
+
+test('weather heals wounded creatures and expires after four commander turns', () => {
+  const game = createGame(['british', 'mongol'], fixedRandom);
+  game.weather = { id: 'suddenwealth', name: 'Sudden Wealth', description: 'Everything heals 1 each turn', remaining: 4 };
+  game.players[0].board = [{ ...buildEmpireDeck(empires[0], fixedRandom).find((card) => card.kind === 'Creature'), instanceId: 'wounded', health: 1, maxHealth: 3, canAttack: false }];
+
+  applyAction(game, 0, { type: 'end-turn' });
+  assert.equal(game.weather.remaining, 3);
+  applyAction(game, 1, { type: 'end-turn' });
+  assert.equal(game.players[0].board[0].health, 2);
+  assert.equal(game.weather.remaining, 2);
+
+  applyAction(game, 0, { type: 'end-turn' });
+  applyAction(game, 1, { type: 'end-turn' });
+  assert.equal(game.players[0].board[0].health, 3);
+  assert.equal(game.weather.remaining, 0);
+  assert.notEqual(game.weather.id, 'suddenwealth');
 });

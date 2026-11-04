@@ -1704,7 +1704,8 @@ function gatherForPlayer(resource) {
 }
 
 function playCard(card, owner) {
-  if (state.ended || state.busy || !canAfford(owner, card)) return;
+  if (state.ended || state.busy) return;
+  if (!canAfford(owner, card)) return notify(`Not enough supplies for ${card.name}.`);
   if (owner.isAI && state.turn !== 'enemy' || !owner.isAI && state.turn !== 'player') return;
   if (onlineConnection?.room) return sendOnlineAction({ type: 'play', cardId: card.instanceId });
   if ((card.kind === 'Creature' || card.kind === 'Structure') && owner.board.length >= MAX_FIELD_CARDS) return notify('Your battlefield is full.');

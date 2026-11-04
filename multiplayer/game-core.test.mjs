@@ -68,6 +68,19 @@ test('attacks resolve on the server and a creature can attack only once per turn
   assert.throws(() => applyAction(game, 0, { type: 'attack', attackerId: 'test-attacker', targetId: null }), /cannot attack/);
 });
 
+test('creatures must be cleared before creatures can attack a commander', () => {
+  const game = createGame(['british', 'mongol'], fixedRandom);
+  game.players[0].board.push({ instanceId: 'attacker', kind: 'Creature', attack: 5, defense: 0, health: 5, canAttack: true });
+  game.players[1].board.push({ instanceId: 'blocker', kind: 'Creature', attack: 1, defense: 0, health: 5, canAttack: false });
+
+  assert.throws(() => applyAction(game, 0, { type: 'attack', attackerId: 'attacker', targetId: null }), /must attack a creature/);
+
+  game.players[1].board = [{ instanceId: 'structure', kind: 'Structure', health: 5 }];
+  game.players[0].board[0].canAttack = true;
+  applyAction(game, 0, { type: 'attack', attackerId: 'attacker', targetId: null });
+  assert.equal(game.players[1].health, 25);
+});
+
 test('playing a card charges its server-defined cost and summons a sleeping creature', () => {
   const game = createGame(['british', 'mongol'], fixedRandom);
   const player = game.players[0];

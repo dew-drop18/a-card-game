@@ -341,50 +341,94 @@ const difficulties = [
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
 const MAX_FIELD_CARDS = 5;
 let inspectedCard = null;
-const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
-let onlineSelection = false;
-let onlineConnection = null;
-let audioContext;
+const battleMusic = new Audio('assets/marching-to-victory.mp3');
+battleMusic.loop = true;
+battleMusic.volume = 0.55;
 
-function playSound(effect) {
-  const AudioContextType = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextType) return;
-  audioContext ||= new AudioContextType();
-  if (audioContext.state === 'suspended') audioContext.resume();
-  const now = audioContext.currentTime;
-  const sounds = {
-    start: [[392, 587, .18, 'triangle'], [587, 784, .24, 'triangle']],
-    match: [[523, 659, .13, 'triangle'], [659, 880, .2, 'triangle'], [880, 1175, .28, 'sine']],
-    draw: [[523, 784, .12, 'sine']],
-    resource: [[392, 587, .15, 'triangle'], [587, 784, .19, 'sine']],
-    gather: [[294, 440, .18, 'triangle'], [440, 587, .21, 'sine']],
-    play: [[330, 494, .11, 'triangle']],
-    spell: [[440, 880, .26, 'sine'], [659, 988, .2, 'triangle']],
-    turn: [[262, 349, .2, 'triangle']],
-    select: [[440, 523, .075, 'sine']],
-    attack: [[180, 90, .24, 'sawtooth'], [330, 165, .18, 'triangle']],
-    impact: [[125, 65, .16, 'square'], [220, 110, .12, 'triangle']],
-    defeat: [[180, 110, .32, 'triangle']],
-    win: [[523, 659, .18, 'triangle'], [659, 784, .28, 'triangle'], [784, 1047, .4, 'sine']],
-  }[effect];
-  if (!sounds) return;
-  sounds.forEach(([startFrequency, endFrequency, duration, type], index) => {
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    const offset = index * .055;
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(startFrequency, now + offset);
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + offset + duration);
-    gain.gain.setValueAtTime(.0001, now + offset);
-    gain.gain.exponentialRampToValueAtTime(.075, now + offset + .015);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + offset + duration);
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start(now + offset);
-    oscillator.stop(now + offset + duration + .01);
+function startBattleMusic() {
+  battleMusic.play().catch(() => {
+    // Browsers may require a later user gesture for online matches.
+    window.addEventListener('pointerdown', resumeBattleMusic, { once: true });
   });
 }
 
+function resumeBattleMusic() {
+  if (state.started && !state.ended) battleMusic.play().catch(() => {});
+}
+
+function stopBattleMusic() {
+  battleMusic.pause();
+  battleMusic.currentTime = 0;
+}
+
+let hoverAudioContext = null;
+let hoveredButton = null;
+let lastHoverSoundAt = 0;
+
+function getHoverAudioContext() {
+  if (!hoverAudioContext) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    hoverAudioContext = new AudioContext();
+  }
+  if (hoverAudioContext.state === 'suspended') hoverAudioContext.resume().catch(() => {});
+  return hoverAudioContext;
+}
+
+function playHoverTone(frequency, duration = 0.09, volume = 0.018, delay = 0) {
+  const context = getHoverAudioContext();
+  if (!context) return;
+  const start = context.currentTime + delay;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(frequency, start);
+  oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.08, start + duration);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.02);
+}
+
+const dynastyBattleCries = {
+  british: { phrase: 'God and glory!', notes: [196, 246.94, 293.66, 392] },
+  mongol: { phrase: 'For the Khan!', notes: [146.83, 174.61, 233.08, 293.66] },
+  russian: { phrase: 'For Tsar and Motherland!', notes: [130.81, 196, 261.63, 392] },
+  qing: { phrase: 'May the Jade Dragon prevail!', notes: [164.81, 220, 329.63, 440] },
+  spanish: { phrase: 'Por reino y corona!', notes: [174.61, 220, 261.63, 349.23] },
+  french: { phrase: 'For crown and frontier!', notes: [196, 261.63, 329.63, 392] },
+};
+
+function playDynastyBattleCry(empireId) {
+  const cry = dynastyBattleCries[empireId];
+  if (!cry) return false;
+  cry.notes.forEach((frequency, index) => playHoverTone(frequency, 0.16, 0.022, index * 0.07));
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cry.phrase);
+    utterance.volume = 0.7;
+    utterance.rate = 0.72;
+    utterance.pitch = empireId === 'mongol' || empireId === 'russian' ? 0.55 : 0.7;
+    const voices = window.speechSynthesis.getVoices();
+    utterance.voice = voices.find((voice) => /english/i.test(voice.lang)) || voices[0] || null;
+    window.speechSynthesis.speak(utterance);
+  }
+  return true;
+}
+
+function playButtonHover(button) {
+  const now = performance.now();
+  if (now - lastHoverSoundAt < 160) return;
+  lastHoverSoundAt = now;
+  const empireId = button.dataset.empire || button.closest('[data-dynasty]')?.dataset.dynasty;
+  if (empireId && playDynastyBattleCry(empireId)) return;
+  playHoverTone(620, 0.065, 0.012);
+  playHoverTone(820, 0.055, 0.008, 0.035);
+}
+const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 function arenaSlot(owner, creature) {
   const foundIndex = owner.board.findIndex((item) => item.instanceId === creature.instanceId);
   const index = foundIndex < 0 ? owner.board.length : foundIndex;
@@ -799,7 +843,6 @@ function updateMatchmakingRoom(message, status = 'searching') {
 }
 
 function startOnlineMatch(empireId) {
-  playSound('select');
   const empire = empires.find((item) => item.id === empireId);
   $('#matchmaking-empire').textContent = empire ? `Searching as ${empire.name} · ${empire.region}` : 'Searching for a rival commander';
   updateMatchmakingRoom('Connecting to matchmaking…');
@@ -838,7 +881,6 @@ function startOnlineMatch(empireId) {
       const credentials = { roomId: message.roomId, token: message.token };
       sessionStorage.setItem('empires-online-match', JSON.stringify(credentials));
       onlineConnection = { queue: null, room: null };
-      playSound('match');
       updateMatchmakingRoom('Your rival has joined. Preparing the battlefield…', 'matched');
       connectOnlineRoom(credentials);
     }
@@ -923,12 +965,14 @@ function renderOnlineState(match) {
   screens.difficulty.hidden = true;
   screens.battle.hidden = false;
   if ($('#matchmaking-dialog').open) $('#matchmaking-dialog').close();
+  startBattleMusic();
   startBattlefieldAnimation();
   updateHeader();
   $('#round-label').textContent = `ONLINE DUEL · ${roman(state.round)}`;
   $('#concede-button').disabled = state.ended;
   refresh();
   if (match.finished) {
+    stopBattleMusic();
     const victory = match.finished.winner === match.seat;
     const reason = match.finished.reason;
     $('#result-title').textContent = reason === 'abandoned' ? 'Duel Abandoned' : victory ? 'Victory' : 'Defeat';
@@ -999,12 +1043,12 @@ function startCampaignBattle() {
   drawUntilHandSize(state.enemy);
   screens.difficulty.hidden = true;
   screens.battle.hidden = false;
+  startBattleMusic();
   startBattlefieldAnimation();
   if ($('#result-dialog').open) $('#result-dialog').close();
   updateHeader();
   refresh();
   beginTurn(state.player);
-  if (campaign.opponentIndex === 0) playSound('start');
 }
 
 function drawCard(owner) {
@@ -1018,10 +1062,8 @@ function drawCard(owner) {
   if (card.kind === 'Resource') {
     owner.resources[card.resource] += card.amount + (owner.empire.id === 'qing' ? 1 : 0);
     notify(`${card.name}: gained ${card.amount} ${card.resource}.`);
-    playSound('resource');
   } else if (owner.hand.length < 10) {
     owner.hand.push(card);
-    playSound('draw');
   }
   else notify(`${card.name} was lost; your hand is full.`);
   return true;
@@ -1181,7 +1223,6 @@ function beginTurn(owner) {
     });
   }
   const turnEffects = applyStructureTurnEffects(owner);
-  playSound('turn');
   drawUntilHandSize(owner);
   state.selectedAttacker = null;
   $('#round-label').textContent = `EMPIRE ${state.campaign.opponentIndex + 1}/5 · ${state.campaign.currentDifficulty.name.toUpperCase()} · STREAK ${state.campaign.winStreak}`;
@@ -1310,6 +1351,7 @@ function makeEmpireChoice(empire, index) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'empire-choice';
+  button.dataset.empire = empire.id;
   button.style.setProperty('--faction', empire.color);
   button.setAttribute('aria-label', `Play as ${empire.name}`);
   button.innerHTML = `<span class="choice-top"><span class="choice-sigil">${empire.sigil}</span><span class="choice-number">0${index + 1}</span></span><span class="choice-name">${empire.name}</span><span class="choice-region">${empire.region}</span>`;
@@ -1701,7 +1743,6 @@ function notify(message) {
 }
 function gather(owner, resource) {
   owner.resources[resource] += 2;
-  playSound('gather');
 }
 
 function gatherForPlayer(resource) {
@@ -1747,7 +1788,6 @@ function playCard(card, owner) {
         }
       }
     }
-    playSound('play');
     notify(`${card.name} joins ${owner.isAI ? 'the rival' : 'your'} company.`);
   } else if (card.kind === 'Structure') {
     owner.board.push({ ...card });
@@ -1755,10 +1795,8 @@ function playCard(card, owner) {
       owner.britishStructureCount += 1;
       randomBritishBonus(owner);
     }
-    playSound('play');
     notify(`${card.name} is built on ${owner.isAI ? 'the rival' : 'your'} battlefield.`);
   } else {
-    playSound('spell');
     applySpell(card, owner);
   }
   if (owner.empire.id === 'french' && ['Creature', 'Spell', 'Structure'].includes(card.kind)) {
@@ -1810,7 +1848,6 @@ function handleCreatureClick(creature, owner) {
     if (creature.kind === 'Structure') return notify('Structures cannot attack.');
     if (!creature.canAttack) return notify('That creature cannot attack until your next turn.');
     state.selectedAttacker = state.selectedAttacker === creature.instanceId ? null : creature.instanceId;
-    playSound('select');
     notify(state.selectedAttacker ? 'Choose a rival creature or commander to attack.' : 'Attack selection cleared.');
     refresh();
   } else if (owner === state.enemy && state.turn === 'player' && state.selectedAttacker) {
@@ -1821,8 +1858,12 @@ function handleCreatureClick(creature, owner) {
 
 function attack(attacker, target, owner = state.player) {
   if (!attacker.canAttack || state.busy) return false;
+  const rival = owner.isAI ? state.player : state.enemy;
+  if (!target && rival.board.some((card) => card.kind === 'Creature')) {
+    notify('You must defeat the rival creatures before attacking the commander.');
+    return false;
+  }
   if (onlineConnection?.room) {
-    playSound('attack');
     return sendOnlineAction({ type: 'attack', attackerId: attacker.instanceId, targetId: target?.instanceId ?? null });
   }
   state.busy = true;
@@ -1830,7 +1871,6 @@ function attack(attacker, target, owner = state.player) {
   attacker.canAttack = false;
   state.selectedAttacker = null;
   const strength = creatureAttack(owner, attacker);
-  const rival = owner.isAI ? state.player : state.enemy;
   const attackerElement = document.querySelector(`[data-card-instance="${attacker.instanceId}"]`);
   const targetElement = target
     ? document.querySelector(`[data-card-instance="${target.instanceId}"]`)
@@ -1841,8 +1881,6 @@ function attack(attacker, target, owner = state.player) {
   attackerElement?.classList.add('combat-attacker');
   targetElement?.classList.add('combat-defender');
   divider.classList.add('combat-active');
-  playSound('attack');
-  window.setTimeout(() => playSound('impact'), duration * .64);
   notify('THE CLASH!');
   return new Promise((resolve) => window.setTimeout(() => {
     let result;
@@ -1897,9 +1935,9 @@ function checkWinner() {
 
 function finishGame(victory) {
   state.ended = true;
+  stopBattleMusic();
   state.campaign.lastVictory = victory;
   state.campaign.winStreak = victory ? state.campaign.winStreak + 1 : 0;
-  playSound(victory ? 'win' : 'defeat');
   state.selectedAttacker = null;
   const beaten = state.campaign.opponentIndex + 1;
   const nextOpponent = state.campaign.opponents[state.campaign.opponentIndex + 1];
@@ -1961,8 +1999,9 @@ async function runAiTurn() {
   }
   const attacker = enemy.board.find((creature) => creature.kind !== 'Structure' && creature.canAttack);
   if (attacker) {
-    const target = state.player.board.length && Math.random() < state.campaign.currentDifficulty.aiTargetChance
-      ? state.player.board.reduce((weakest, creature) => (creature.kind === 'Structure' ? creature.health : currentCreatureHealth(state.player, creature)) < (weakest.kind === 'Structure' ? weakest.health : currentCreatureHealth(state.player, weakest)) ? creature : weakest, state.player.board[0])
+    const blockers = state.player.board.filter((card) => card.kind === 'Creature');
+    const target = blockers.length && Math.random() < state.campaign.currentDifficulty.aiTargetChance
+      ? blockers.reduce((weakest, creature) => currentCreatureHealth(state.player, creature) < currentCreatureHealth(state.player, weakest) ? creature : weakest, blockers[0])
       : null;
     notify(`${enemy.empire.name} readies ${attacker.name} to attack.`);
     await waitFor(550);
@@ -1980,6 +2019,7 @@ async function runAiTurn() {
 }
 
 function returnToSelection() {
+  stopBattleMusic();
   if (onlineConnection?.queue) onlineConnection.queue.close();
   if (onlineConnection?.room) onlineConnection.room.close();
   onlineConnection = null;
@@ -2092,10 +2132,26 @@ $('#play-again').addEventListener('click', handleCampaignResult);
 $('#enemy-hero').addEventListener('click', () => {
   if (state.turn !== 'player' || !state.selectedAttacker || state.busy) return;
   const attacker = state.player.board.find((creature) => creature.instanceId === state.selectedAttacker);
+  if (attacker && state.enemy.board.some((card) => card.kind === 'Creature')) {
+    notify('You must defeat the rival creatures before attacking the commander.');
+    return;
+  }
   if (attacker) attack(attacker, null);
 });
 $('#enemy-hero').addEventListener('keydown', (event) => {
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#enemy-hero').click(); }
+});
+document.addEventListener('pointerover', (event) => {
+  const button = event.target.closest('button');
+  if (!button || button === hoveredButton || !button.isConnected) return;
+  hoveredButton = button;
+  playButtonHover(button);
+});
+document.addEventListener('pointerout', (event) => {
+  const button = event.target.closest('button');
+  if (button && (!event.relatedTarget || !button.contains(event.relatedTarget))) {
+    if (hoveredButton === button) hoveredButton = null;
+  }
 });
 $('#result-dialog').addEventListener('close', () => {
   if (state.ended) returnToSelection();

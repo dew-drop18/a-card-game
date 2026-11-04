@@ -565,6 +565,7 @@ export function applyAction(game, seat, action) {
     if (action.targetId !== null && typeof action.targetId !== 'string') throw new Error('Invalid target.');
     const target = action.targetId === null ? null : rival.board.find((card) => card.instanceId === action.targetId);
     if (action.targetId !== null && !target) throw new Error('That rival creature is no longer on the field.');
+    if (action.targetId === null && rival.board.some((card) => card.kind === 'Creature')) throw new Error('You must attack a creature while the rival has blockers.');
     attacker.canAttack = false;
     const strength = creatureAttack(player, attacker);
     if (target) {

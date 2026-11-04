@@ -43,10 +43,10 @@ When running locally, `multiplayer-config.js` must point to the deployed Worker,
 
 1. Choose one of the six empires on the title screen.
 2. For a campaign battle, choose a difficulty:
-   - **Easy Living:** rival starts with 22 health and 1 of each supply.
-   - **Farm Work:** rival starts with 30 health and 2 of each supply.
-   - **Painful Adventure:** rival starts with 36 health and 3 of each supply.
-   - **True Battlegrounds:** rival starts with 42 health and 4 of each supply.
+   - **Easy Living:** rivals start with 22 health and target cautiously.
+   - **Farm Work:** rivals start with 30 health and attack at a balanced rate.
+   - **Painful Adventure:** rivals start with 36 health and target aggressively.
+   - **True Battlegrounds:** rivals start with 42 health and target threats relentlessly.
 3. Each commander starts with 30 health. Reduce the rival to 0 health to win.
 4. In the campaign, victory advances the conquest to the next dynasty. Defeat resets the streak and retries the current dynasty at the selected starting difficulty.
 

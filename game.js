@@ -98,14 +98,13 @@ const specialHarvestResources = { british: 'wood', mongol: 'food', russian: 'woo
 function makeCost(food, wood, stone) { return { food, wood, stone }; }
 
 function makeCard(empire, details, serial) {
-  const code = empire.id.slice(0, 3).toUpperCase();
   const cost = details.kind === 'Resource'
     ? details.cost
     : Object.fromEntries(resourceNames.map((resource) => [
       resource,
       details.cost[resource] + Number(details.cost[resource] > 0),
     ]));
-  return { ...details, cost, name: `${code}-${String(serial).padStart(3, '0')} ${details.name}`, empire, instanceId: `${empire.id}-${details.id}` };
+  return { ...details, cost, name: details.name, empire, instanceId: `${empire.id}-${details.id}` };
 }
 
 function getUnitLoadout(unit, empire, tier) {
@@ -274,10 +273,10 @@ function spellDescription(effect, amount) {
 const $ = (selector) => document.querySelector(selector);
 const screens = { intro: $('#intro-screen'), difficulty: $('#difficulty-screen'), battle: $('#battle-screen') };
 const difficulties = [
-  { id: 'easy-living', name: 'Easy Living', enemyHealth: 22, enemySupplies: 1, aiTargetChance: .2, color: '#668357', summary: 'Rivals begin with 22 health and 1 of each supply.' },
-  { id: 'farm-work', name: 'Farm Work', enemyHealth: 30, enemySupplies: 2, aiTargetChance: .4, color: '#aa7933', summary: 'Rivals begin with 30 health and 2 of each supply.' },
-  { id: 'painful-adventure', name: 'Painful Adventure', enemyHealth: 36, enemySupplies: 3, aiTargetChance: .65, color: '#bd6840', summary: 'Rivals begin with 36 health and 3 of each supply.' },
-  { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, enemySupplies: 4, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and 4 of each supply.' },
+  { id: 'easy-living', name: 'Easy Living', enemyHealth: 22, aiTargetChance: .2, color: '#668357', summary: 'Rivals begin with 22 health and target more cautiously.' },
+  { id: 'farm-work', name: 'Farm Work', enemyHealth: 30, aiTargetChance: .4, color: '#aa7933', summary: 'Rivals begin with 30 health and make balanced attacks.' },
+  { id: 'painful-adventure', name: 'Painful Adventure', enemyHealth: 36, aiTargetChance: .65, color: '#bd6840', summary: 'Rivals begin with 36 health and attack aggressively.' },
+  { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and target threats relentlessly.' },
 ];
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
 const MAX_FIELD_CARDS = 5;
@@ -688,10 +687,10 @@ function createPlayer(empire, isAI, difficulty) {
 
 function getCampaignDifficulty(campaign) {
   const streak = campaign.winStreak;
+  const opponentProgress = campaign.opponentIndex;
   return {
     ...campaign.difficulty,
-    enemyHealth: campaign.difficulty.enemyHealth + streak * 6,
-    enemySupplies: campaign.difficulty.enemySupplies + streak,
+    enemyHealth: campaign.difficulty.enemyHealth + opponentProgress * 2 + streak * 3,
     aiTargetChance: Math.min(.98, campaign.difficulty.aiTargetChance + streak * .05),
   };
 }
@@ -1779,7 +1778,7 @@ function finishGame(victory) {
   $('#result-title').textContent = victory ? nextOpponent ? `${beaten} of 5 victories` : 'Campaign Complete' : 'Defeat';
   $('#result-copy').textContent = victory
     ? nextOpponent
-      ? `${state.enemy.empire.name} has fallen. Your streak is ${state.campaign.winStreak}. ${nextOpponent.name} now fields ${nextDifficulty.enemyHealth} health and ${nextDifficulty.enemySupplies} of each supply.`
+      ? `${state.enemy.empire.name} has fallen. Your streak is ${state.campaign.winStreak}. ${nextOpponent.name} now fields ${nextDifficulty.enemyHealth} health.`
       : `${state.player.empire.name} has defeated all five rival empires and claimed the crown.`
     : `${state.enemy.empire.name} has taken the field. Your win streak resets; retry this dynasty at your chosen starting difficulty.`;
   $('#play-again').innerHTML = victory
@@ -1833,7 +1832,7 @@ async function runAiTurn() {
   }
   const attacker = enemy.board.find((creature) => creature.kind !== 'Structure' && creature.canAttack);
   if (attacker) {
-    const target = state.player.board.length && Math.random() < state.campaign.difficulty.aiTargetChance
+    const target = state.player.board.length && Math.random() < state.campaign.currentDifficulty.aiTargetChance
       ? state.player.board.reduce((weakest, creature) => (creature.kind === 'Structure' ? creature.health : currentCreatureHealth(state.player, creature)) < (weakest.kind === 'Structure' ? weakest.health : currentCreatureHealth(state.player, weakest)) ? creature : weakest, state.player.board[0])
       : null;
     notify(`${enemy.empire.name} readies ${attacker.name} to attack.`);

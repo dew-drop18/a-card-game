@@ -98,7 +98,7 @@ function makeCard(empire, details, serial) {
       resource,
       details.cost[resource] + Number(details.cost[resource] > 0),
     ]));
-  return { ...details, cost, name: `${empire.id.slice(0, 3).toUpperCase()}-${String(serial).padStart(3, '0')} ${details.name}`, empire, instanceId: `${empire.id}-${details.id}` };
+  return { ...details, cost, name: details.name, empire, instanceId: `${empire.id}-${details.id}` };
 }
 
 function getUnitLoadout(unit, empire, tier) {

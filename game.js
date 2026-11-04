@@ -1560,9 +1560,9 @@ function refresh() {
   renderBoard($('#enemy-board'), state.enemy, 'The rival has no creatures');
   $('#hand').replaceChildren(...state.player.hand.map(makeHandCard));
   $('#hand-count').textContent = `${state.player.hand.length} CARD${state.player.hand.length === 1 ? '' : 'S'}`;
-  document.querySelectorAll('.harvest-button').forEach((button) => { button.disabled = state.turn !== 'player' || state.gathered || state.busy || state.ended; });
+  document.querySelectorAll('.harvest-button').forEach((button) => { button.disabled = state.turn !== 'player' || state.gathered || state.ended; });
   $('#gather-status').textContent = state.gathered ? 'SUPPLIES GATHERED' : 'ONE GATHER PER TURN';
-  $('#end-turn').disabled = state.turn !== 'player' || state.busy || state.ended;
+  $('#end-turn').disabled = state.turn !== 'player' || state.ended;
   $('#player-hero').classList.toggle('attacking', Boolean(state.selectedAttacker));
 }
 
@@ -1577,7 +1577,7 @@ function gather(owner, resource) {
 }
 
 function gatherForPlayer(resource) {
-  if (state.turn !== 'player' || state.gathered || state.busy || state.ended) return;
+  if (state.turn !== 'player' || state.gathered || state.ended) return;
   if (onlineConnection?.room) return sendOnlineAction({ type: 'gather', resource });
   gather(state.player, resource);
   state.gathered = true;

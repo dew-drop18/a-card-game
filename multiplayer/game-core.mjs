@@ -8,6 +8,7 @@ export const empires = [
 ];
 
 const resourceNames = ['food', 'wood', 'stone'];
+const MAX_FIELD_CARDS = 5;
 const weatherTypes = [
   { id: 'average', name: 'Average', description: 'Normal conditions', weight: 10 },
   { id: 'drought', name: 'Drought', description: 'Creatures lose 1 temporary health', weight: 3 },
@@ -515,7 +516,7 @@ export function applyAction(game, seat, action) {
     if (index === -1) throw new Error('That card is not in your hand.');
     const card = player.hand[index];
     if (!resourceNames.every((resource) => player.resources[resource] >= card.cost[resource])) throw new Error('You cannot afford that card.');
-    if ((card.kind === 'Creature' || card.kind === 'Structure') && player.board.length >= 5) throw new Error('Your battlefield is full.');
+    if ((card.kind === 'Creature' || card.kind === 'Structure') && player.board.length >= MAX_FIELD_CARDS) throw new Error('Your battlefield is full.');
     if ((card.effect === 'rally' || card.effect === 'ward') && !player.board.some((item) => item.kind === 'Creature')) throw new Error('You need a creature on the field for that spell.');
     resourceNames.forEach((resource) => { player.resources[resource] -= card.cost[resource]; });
     player.hand.splice(index, 1);

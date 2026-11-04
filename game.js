@@ -280,6 +280,7 @@ const difficulties = [
   { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, enemySupplies: 4, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and 4 of each supply.' },
 ];
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
+const MAX_FIELD_CARDS = 5;
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 let onlineSelection = false;
 let onlineConnection = null;
@@ -1483,12 +1484,12 @@ function makeHandCard(card) {
   button.className = `hand-card${card.kind === 'Spell' ? ' spell-card' : ''}${card.kind === 'Structure' ? ' structure-card' : ''}`;
   button.draggable = (card.kind === 'Creature' || card.kind === 'Structure') && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
-  button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5 && (card.kind === 'Creature' || card.kind === 'Structure');
+  button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= MAX_FIELD_CARDS && (card.kind === 'Creature' || card.kind === 'Structure');
   button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : card.kind === 'Structure' ? ` Health ${card.health}. No attack.` : ''}`);
   button.innerHTML = `<span class="hand-card-top"><span class="hand-symbol">${card.glyph}</span><span class="choice-number">${card.empire.sigil}</span></span>`;
   button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.special ? 'EMPIRE SPECIAL · ' : ''}${card.kind}</span>${card.weaponName ? `<span class="hand-weapon">⚔ ${card.weaponName}${card.mounted ? ' · Mounted' : ''}</span><span class="hand-feature">${card.species ? `${card.species} · ${card.armor}` : `${card.armor} · ${card.headwear}`}</span>` : ''}<span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : card.kind === 'Structure' ? `<span class="hand-stats"><span>♥ ${card.health}</span><span>NO ATTACK</span></span>` : ''}`));
   button.addEventListener('dragstart', (event) => {
-    if ((card.kind !== 'Creature' && card.kind !== 'Structure') || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= 5) {
+    if ((card.kind !== 'Creature' && card.kind !== 'Structure') || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= MAX_FIELD_CARDS) {
       event.preventDefault();
       return;
     }
@@ -1521,7 +1522,7 @@ function makeBoardCard(creature, owner) {
 
 function renderBoard(element, owner, label) {
   element.replaceChildren();
-  element.classList.toggle('drop-zone', !owner.isAI && state.turn === 'player' && !state.busy && owner.board.length < 5);
+  element.classList.toggle('drop-zone', !owner.isAI && state.turn === 'player' && !state.busy && owner.board.length < MAX_FIELD_CARDS);
   const heading = document.createElement('span');
   heading.className = 'battlefield-label';
   heading.textContent = owner.isAI ? 'RIVAL BATTLEFIELD' : 'YOUR BATTLEFIELD';
@@ -1589,7 +1590,7 @@ function playCard(card, owner) {
   if (state.ended || state.busy || !canAfford(owner, card)) return;
   if (owner.isAI && state.turn !== 'enemy' || !owner.isAI && state.turn !== 'player') return;
   if (onlineConnection?.room) return sendOnlineAction({ type: 'play', cardId: card.instanceId });
-  if ((card.kind === 'Creature' || card.kind === 'Structure') && owner.board.length >= 5) return notify('Your battlefield is full.');
+  if ((card.kind === 'Creature' || card.kind === 'Structure') && owner.board.length >= MAX_FIELD_CARDS) return notify('Your battlefield is full.');
   if ((card.effect === 'rally' || card.effect === 'ward') && !owner.board.some((item) => item.kind !== 'Structure')) return notify('You need a creature on the field for that spell.');
   resourceNames.forEach((resource) => { owner.resources[resource] -= card.cost[resource]; });
   owner.hand = owner.hand.filter((item) => item.instanceId !== card.instanceId);
@@ -1810,7 +1811,7 @@ async function runAiTurn() {
   if (state.ended) return;
   if (!state.gathered) {
     const nextAffordable = enemy.hand
-      .filter((card) => (card.kind !== 'Creature' && card.kind !== 'Structure' || enemy.board.length < 5)
+      .filter((card) => (card.kind !== 'Creature' && card.kind !== 'Structure' || enemy.board.length < MAX_FIELD_CARDS)
         && !((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.some((item) => item.kind !== 'Structure')))
       .sort((a, b) => totalCost(a.cost) - totalCost(b.cost))[0];
     const resourceToGather = nextAffordable ? resourceNames.reduce((best, resource) => nextAffordable.cost[resource] - enemy.resources[resource] > nextAffordable.cost[best] - enemy.resources[best] ? resource : best, resourceNames[0]) : 'food';
@@ -1823,7 +1824,7 @@ async function runAiTurn() {
   const affordable = enemy.hand.filter((card) => canAfford(enemy, card)).sort((a, b) => totalCost(b.cost) - totalCost(a.cost));
   for (const card of affordable) {
     if ((card.effect === 'rally' || card.effect === 'ward') && !enemy.board.some((item) => item.kind !== 'Structure')) continue;
-    if ((card.kind === 'Creature' || card.kind === 'Structure') && enemy.board.length >= 5) continue;
+    if ((card.kind === 'Creature' || card.kind === 'Structure') && enemy.board.length >= MAX_FIELD_CARDS) continue;
     notify(`${enemy.empire.name} plays ${card.name}.`);
     await waitFor(650);
     if (state.ended) return;
@@ -1894,7 +1895,7 @@ function makeDifficultyChoice(option, index) {
   return button;
 }
 
-$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Every dynasty has a 100-card deck, but each history-inspired composition balances creatures, spells, structures, supplies, and 15 empire-special cards differently. Supply cards grant 2 resources when drawn.';
+$('.rule-note').textContent = 'Start with 5 cards. At the start of each turn, draw until your hand has 5 cards. Each player can have at most 5 creatures and structures combined on the battlefield. Every dynasty has a 100-card deck, but each history-inspired composition balances creatures, spells, structures, supplies, and 15 empire-special cards differently. Supply cards grant 2 resources when drawn.';
 $('#empire-grid').replaceChildren(...empires.map(makeEmpireChoice));
 $('#difficulty-grid').replaceChildren(...difficulties.map(makeDifficultyChoice));
 initializeTutorial();
@@ -1935,7 +1936,7 @@ $('.harvest-row').addEventListener('click', (event) => {
   if (button) gatherForPlayer(button.dataset.resource);
 });
 $('#player-board').addEventListener('dragover', (event) => {
-  if (state.turn !== 'player' || state.busy || state.player.board.length >= 5) return;
+  if (state.turn !== 'player' || state.busy || state.player.board.length >= MAX_FIELD_CARDS) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
   $('#player-board').classList.add('drag-over');

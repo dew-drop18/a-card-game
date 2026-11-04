@@ -83,6 +83,28 @@ test('playing a card charges its server-defined cost and summons a sleeping crea
     wood: resourcesBefore.wood - creature.cost.wood,
     stone: resourcesBefore.stone - creature.cost.stone,
   });
+
+  test('a commander cannot place more than five creatures or structures', () => {
+    const game = createGame(['british', 'mongol'], fixedRandom);
+    const player = game.players[0];
+    const deck = buildEmpireDeck(empires[0], fixedRandom);
+    const creature = deck.find((card) => card.kind === 'Creature');
+    const structure = deck.find((card) => card.kind === 'Structure');
+    player.resources = { food: 20, wood: 20, stone: 20 };
+    player.board = Array.from({ length: 5 }, (_, index) => ({
+      ...creature,
+      instanceId: `field-card-${index}`,
+      health: creature.health,
+      maxHealth: creature.health,
+    }));
+    creature.instanceId = 'blocked-creature';
+    structure.instanceId = 'blocked-structure';
+    player.hand.push(creature, structure);
+
+    assert.throws(() => applyAction(game, 0, { type: 'play', cardId: creature.instanceId }), /battlefield is full/);
+    assert.throws(() => applyAction(game, 0, { type: 'play', cardId: structure.instanceId }), /battlefield is full/);
+    assert.equal(player.board.length, 5);
+  });
 });
 
 test('structures have passive start-of-turn effects and no attack', () => {

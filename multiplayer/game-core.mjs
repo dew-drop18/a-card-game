@@ -270,7 +270,7 @@ function makePlayer(empireId, seat, random) {
   deck.forEach((card) => { card.instanceId = `${card.instanceId}-p${seat}`; });
   const player = {
     empire, health: 30, maxHealth: 30,
-    resources: makeCost(2, 2, 2),
+    resources: makeCost(5, 5, 5),
     deck, hand: [], board: [], fatigue: 0, britishStructureCount: 0,
   };
   drawToFive(player);

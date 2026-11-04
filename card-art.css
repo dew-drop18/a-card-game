@@ -480,6 +480,26 @@ button,
 .hand-card.structure-card {
   background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 56%, color-mix(in srgb, var(--faction) 16%, #f6f0e2) 100%);
 }
+.hand-card.creature-card,
+.board-card.creature-card {
+  border: 3px solid #6f8f4d;
+  box-shadow: 2px 3px 0 #6f8f4d55, 0 0 0 1px #3f5e2c inset;
+}
+.hand-card.resource-card,
+.board-card.resource-card {
+  border: 3px solid #d6a62d;
+  box-shadow: 2px 3px 0 #d6a62d55, 0 0 0 1px #8d6812 inset;
+}
+.hand-card.structure-card,
+.board-card.structure-card,
+.structure-board-card {
+  border: 3px solid #9a7250;
+  box-shadow: 2px 3px 0 #9a725055, 0 0 0 1px #63452f inset;
+}
+.hand-card.spell-card {
+  border: 3px solid #7b67c5;
+  box-shadow: 2px 3px 0 #7b67c555, 0 0 0 1px #4a3d86 inset;
+}
 .structure-board-card {
   border-style: double;
   background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 65%, color-mix(in srgb, var(--faction) 20%, #f6f0e2) 100%);

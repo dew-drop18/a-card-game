@@ -27,6 +27,8 @@ test('each empire starts with a shuffled 100-card deck and a five-card hand', ()
       }
     }
     assert.equal(game.players[0].hand.length, 5);
+    assert.deepEqual(game.players[0].resources, { food: 5, wood: 5, stone: 5 });
+    assert.deepEqual(game.players[1].resources, { food: 5, wood: 5, stone: 5 });
   }
 });
 

@@ -54,6 +54,7 @@ When running locally, `multiplayer-config.js` must point to the deployed Worker,
 
 - Your opening hand has 5 cards. At the start of each turn, cards are drawn until your hand contains 5 cards.
 - Each commander may have no more than 5 creatures and structures combined on the battlefield.
+- Each commander starts with 5 food, 5 wood, and 5 stone. Drawing a supply card grants its printed resources without a separate payment.
 - You may hold up to 10 cards. A card drawn when your hand is full is lost.
 - Supply cards are played automatically when drawn. They add supplies and do not count toward hand size.
 - Once per turn, choose **FOOD**, **WOOD**, or **STONE** under **GATHER +2** to gain 2 of that supply. Supplies carry between turns.

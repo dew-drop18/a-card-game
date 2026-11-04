@@ -682,7 +682,7 @@ function shuffle(items) {
 
 function createPlayer(empire, isAI, difficulty) {
   const health = isAI ? difficulty.enemyHealth : 30;
-  const supplies = isAI ? difficulty.enemySupplies : 2;
+  const supplies = 5;
   return { empire, isAI, health, maxHealth: health, resources: makeCost(supplies, supplies, supplies), deck: buildEmpireDeck(empire), hand: [], board: [], fatigue: 0, playedKinds: [], frenchBonusActive: false, britishStructureCount: 0 };
 }
 
@@ -1481,7 +1481,7 @@ function makePixelArt(card, compact = false) {
 function makeHandCard(card) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `hand-card${card.kind === 'Spell' ? ' spell-card' : ''}${card.kind === 'Structure' ? ' structure-card' : ''}`;
+  button.className = `hand-card ${card.kind.toLowerCase()}-card`;
   button.draggable = (card.kind === 'Creature' || card.kind === 'Structure') && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
   button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= MAX_FIELD_CARDS && (card.kind === 'Creature' || card.kind === 'Structure');
@@ -1506,7 +1506,7 @@ function makeBoardCard(creature, owner) {
   const isStructure = creature.kind === 'Structure';
   const health = isStructure ? creature.health : currentCreatureHealth(owner, creature);
   const attack = isStructure ? null : creatureAttack(owner, creature);
-  button.className = `board-card${!isStructure && !creature.canAttack ? ' sleeping' : ''}${isStructure ? ' structure-board-card' : ''}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}${creature.weatherDrought ? ' weather-drought-card' : ''}${creature.weatherPlague ? ' weather-plague-card' : ''}${creature.weatherPeace ? ' weather-peace-card' : ''}`;
+  button.className = `board-card ${creature.kind.toLowerCase()}-card${!isStructure && !creature.canAttack ? ' sleeping' : ''}${isStructure ? ' structure-board-card' : ''}${state.selectedAttacker === creature.instanceId ? ' selected' : ''}${creature.weatherDrought ? ' weather-drought-card' : ''}${creature.weatherPlague ? ' weather-plague-card' : ''}${creature.weatherPeace ? ' weather-peace-card' : ''}`;
   button.style.cssText = factionStyle(creature.empire);
   button.dataset.cardInstance = creature.instanceId;
   button.setAttribute('aria-label', isStructure

@@ -1628,7 +1628,17 @@ function makeBoardCard(creature, owner) {
     : `${creature.name}: attack ${attack}, health ${health}, defense ${creature.defense}${creature.canAttack ? ', ready to attack' : ', cannot attack yet'}`);
   button.innerHTML = `<span class="board-top"><span class="card-sigil">${creature.glyph}</span></span><span class="board-type">${creature.special ? 'EMPIRE SPECIAL · ' : ''}${isStructure ? 'STRUCTURE' : 'CREATURE'}</span>`;
   const description = isStructure ? creature.text : creature.species ? `${creature.species} · ${creature.armor}` : `${creature.weaponName} · ${creature.headwear}`;
-  const stats = isStructure ? `<span>♥ ${health}</span><span>NO ATTACK</span>` : `<span>⚔ ${attack}</span><span>♥ ${health}</span><span>⬡ ${creature.defense}</span>`;
+  const defense = creatureDefense(owner, creature);
+  const boostedAttack = attack > creature.attack;
+  const boostedHealth = health > creature.health;
+  const boostedDefense = defense > (creature.defense || 0);
+  const negativeAttack = Boolean(creature.weatherPenalty?.attack);
+  const negativeHealth = Boolean(creature.weatherDrought || creature.weatherPlague || creature.weatherPenalty?.health);
+  const negativeDefense = Boolean(creature.weatherPenalty?.defense);
+  const statClass = (boosted, negative) => boosted ? 'stat-boosted' : negative ? 'stat-negative' : '';
+  const stats = isStructure
+    ? `<span class="${statClass(false, creature.weatherPenalty?.health)}">♥ ${health}</span><span>NO ATTACK</span>`
+    : `<span class="${statClass(boostedAttack, negativeAttack)}">⚔ ${attack}</span><span class="${statClass(boostedHealth, negativeHealth)}">♥ ${health}</span><span class="${statClass(boostedDefense, negativeDefense)}">⬡ ${defense}</span>`;
   button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${description}</span><span class="board-stats">${stats}</span>`), makeCardInspectControl(creature));
   button.addEventListener('click', (event) => {
     if (event.target.closest('.card-inspect-button')) return;

@@ -116,6 +116,8 @@
 .board-card .board-stats span:first-child { color: #c04d39; }
 .board-card .board-stats span:nth-child(2) { color: #37849b; }
 .board-card .board-stats span:last-child { color: #99802e; }
+.board-card .board-stats span.stat-boosted { color: #b8860b !important; }
+.board-card .board-stats span.stat-negative { color: #4f8a3a !important; }
 .board-card.selected {
   outline-color: #e55f43;
   box-shadow: 0 0 0 4px #f5c75d88, 2px 3px 0 color-mix(in srgb, var(--faction) 24%, transparent);

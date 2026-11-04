@@ -1676,7 +1676,7 @@ function refresh() {
   }
   renderBoard($('#player-board'), state.player, 'No company on the field');
   renderBoard($('#enemy-board'), state.enemy, 'The rival has no creatures');
-  $('#hand').replaceChildren(...state.player.hand.map(makeHandCard));
+  $('#hand').replaceChildren(...state.player.hand.map((card) => makeHandCard(card)));
   $('#hand-count').textContent = `${state.player.hand.length} CARD${state.player.hand.length === 1 ? '' : 'S'}`;
   document.querySelectorAll('.harvest-button').forEach((button) => { button.disabled = state.turn !== 'player' || state.gathered || state.ended; });
   $('#gather-status').textContent = state.gathered ? 'SUPPLIES GATHERED' : 'ONE GATHER PER TURN';

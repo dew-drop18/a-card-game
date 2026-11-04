@@ -346,6 +346,7 @@ battleMusic.loop = true;
 battleMusic.volume = 0.55;
 
 function startBattleMusic() {
+  if (!battleMusic.paused) return;
   battleMusic.play().catch(() => {
     // Browsers may require a later user gesture for online matches.
     window.addEventListener('pointerdown', resumeBattleMusic, { once: true });
@@ -360,6 +361,12 @@ function stopBattleMusic() {
   battleMusic.pause();
   battleMusic.currentTime = 0;
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && state.started && !state.ended && battleMusic.paused) {
+    resumeBattleMusic();
+  }
+});
 
 let hoverAudioContext = null;
 let hoveredButton = null;
@@ -423,10 +430,98 @@ function playButtonHover(button) {
   const now = performance.now();
   if (now - lastHoverSoundAt < 160) return;
   lastHoverSoundAt = now;
+  const cardInstance = button.dataset.cardInstance;
+  if (cardInstance) {
+    const card = findCardByInstance(cardInstance);
+    if (card?.kind === 'Creature') {
+      playCharacterMoan(card);
+      return;
+    }
+  }
   const empireId = button.dataset.empire || button.closest('[data-dynasty]')?.dataset.dynasty;
   if (empireId && playDynastyBattleCry(empireId)) return;
   playHoverTone(620, 0.065, 0.012);
   playHoverTone(820, 0.055, 0.008, 0.035);
+}
+
+function stableCardSoundSeed(card) {
+  const source = `${card.empire?.id || ''}:${card.id || card.instanceId || card.name}`;
+  let hash = 2166136261;
+  for (const character of source) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return hash >>> 0;
+}
+
+function findCardByInstance(instanceId) {
+  if (!instanceId) return null;
+  return [state.player?.hand, state.player?.board, state.enemy?.hand, state.enemy?.board]
+    .filter(Boolean)
+    .flat()
+    .find((card) => card.instanceId === instanceId) || null;
+}
+
+function playNoiseBurst(duration = 0.25, volume = 0.08, cutoff = 900) {
+  const context = getHoverAudioContext();
+  if (!context) return;
+  const frameCount = Math.ceil(context.sampleRate * duration);
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let index = 0; index < frameCount; index++) {
+    samples[index] = (Math.random() * 2 - 1) * (1 - index / frameCount);
+  }
+  const source = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  filter.type = 'lowpass';
+  filter.frequency.value = cutoff;
+  gain.gain.value = volume;
+  source.buffer = buffer;
+  source.connect(filter).connect(gain).connect(context.destination);
+  source.start();
+}
+
+function playCharacterMoan(card) {
+  const seed = stableCardSoundSeed(card);
+  const isFemale = seed % 100 >= 65;
+  const speciesPitch = {
+    lion: 118, wolf: 104, eagle: 180, dragon: 76, bear: 82, stag: 112,
+    lynx: 128, bison: 88, owl: 210,
+  };
+  const archetypePitch = card.mounted ? 98 : card.species ? speciesPitch[card.species] : (card.weaponName || '').includes('bow') ? 155 : 126;
+  const base = (archetypePitch || 126) * (isFemale ? 1.28 : 1) * (0.94 + ((seed % 13) / 100));
+  const context = getHoverAudioContext();
+  if (!context) return;
+  const start = context.currentTime;
+  const duration = card.species ? 0.72 : 0.58;
+
+  [0, 0.09].forEach((offset, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    oscillator.type = card.species ? (index ? 'triangle' : 'sawtooth') : 'triangle';
+    oscillator.frequency.setValueAtTime(base + (seed % 17), start + offset);
+    oscillator.frequency.exponentialRampToValueAtTime(base * (0.68 + (seed % 5) * 0.015), start + offset + duration * 0.7);
+    filter.type = 'bandpass';
+    filter.frequency.value = base * (isFemale ? 3.1 : 2.4);
+    filter.Q.value = 2.8;
+    gain.gain.setValueAtTime(0.0001, start + offset);
+    gain.gain.exponentialRampToValueAtTime(card.species ? 0.045 : 0.032, start + offset + 0.07);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + duration);
+    oscillator.connect(filter).connect(gain).connect(context.destination);
+    oscillator.start(start + offset);
+    oscillator.stop(start + offset + duration + 0.03);
+  });
+}
+
+function playDeathCry(card) {
+  const seed = stableCardSoundSeed(card);
+  playCharacterMoan(card);
+  playHoverTone(155 + (seed % 55), 0.3, 0.028, 0.12);
+}
+
+function playStructureDestruction(card) {
+  playNoiseBurst(0.42, 0.12, 650);
+  playHoverTone(92, 0.48, 0.05, 0.02);
+  playHoverTone(58, 0.62, 0.035, 0.13);
 }
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 function arenaSlot(owner, creature) {
@@ -1098,6 +1193,8 @@ function rollWeather() {
 }
 
 function removeDeadWeatherCreatures(owner) {
+  const dead = owner.board.filter((item) => item.kind === 'Creature' && currentCreatureHealth(owner, item) <= 0);
+  dead.forEach(playDeathCry);
   owner.board = owner.board.filter((item) => item.kind !== 'Creature' || currentCreatureHealth(owner, item) > 0);
 }
 
@@ -1612,6 +1709,7 @@ function makeHandCard(card, inspectOnly = false) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `hand-card ${card.kind.toLowerCase()}-card`;
+  button.dataset.cardInstance = card.instanceId;
   button.draggable = (card.kind === 'Creature' || card.kind === 'Structure') && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
   button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : card.kind === 'Structure' ? ` Health ${card.health}. No attack.` : ''}`);
@@ -1789,6 +1887,7 @@ function playCard(card, owner) {
       }
     }
     notify(`${card.name} joins ${owner.isAI ? 'the rival' : 'your'} company.`);
+    playCharacterMoan(card);
   } else if (card.kind === 'Structure') {
     owner.board.push({ ...card });
     if (owner.empire.id === 'british') {
@@ -1834,6 +1933,8 @@ function damageCreature(creature, amount) {
   const owner = [state.player, state.enemy].find((player) => player.board.includes(creature));
   creature.health -= Math.max(1, amount - (owner ? creatureDefense(owner, creature) : (creature.defense || 0)));
   if (owner && (creature.kind === 'Structure' ? creature.health <= 0 : currentCreatureHealth(owner, creature) <= 0)) {
+    if (creature.kind === 'Structure') playStructureDestruction(creature);
+    else playDeathCry(creature);
     owner.board = owner.board.filter((item) => item.instanceId !== creature.instanceId);
     notify(`${creature.name} leaves the field.`);
     if (creature.kind === 'Structure') owner.board = owner.board.filter((item) => item.kind !== 'Creature' || currentCreatureHealth(owner, item) > 0);

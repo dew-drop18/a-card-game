@@ -1546,7 +1546,7 @@ function makeCardInspectControl(card) {
   inspectButton.dataset.cardInspectControl = 'true';
   inspectButton.setAttribute('aria-label', `Enlarge ${card.name}`);
   inspectButton.title = 'Enlarge card';
-  inspectButton.textContent = 'VIEW';
+  inspectButton.textContent = '⛶';
   const openInspection = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1587,7 +1587,7 @@ function makeHandCard(card, inspectOnly = false) {
   if (!inspectOnly) {
     button.addEventListener('click', (event) => {
       if (event.target.closest('.card-inspect-button')) return;
-      openCardDetails(card);
+      playCard(card, state.player);
     });
   }
   return button;

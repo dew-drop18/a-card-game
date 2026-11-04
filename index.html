@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#eee3ca">
 <title>Empires &amp; Oaths</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="card-art.css">
+<link rel="stylesheet" href="card-art.css?v=20261104-13">
 <link rel="stylesheet" href="multiplayer.css">
 <style>
 .online-entry{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0 4px}
@@ -18,7 +18,7 @@
 .weather-banner{position:absolute;z-index:4;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #ffffff55;background:#25261fdd;color:#fff8e8;font:10px 'DM Mono','Courier New',monospace;letter-spacing:.08em;pointer-events:none;white-space:nowrap}.battlefield-stage{position:relative}.weather-banner em{font-style:normal;color:#d9cda9}.weather-banner.hidden{display:none}.weather-average{background:linear-gradient(180deg,#9ebf9a,#c8d09d)}.weather-drought{background:linear-gradient(180deg,#d9ba6e,#b69255)}.weather-thunderstorm{background:linear-gradient(180deg,#555d68,#9b806f)}.weather-blackplague{background:linear-gradient(180deg,#6d7150,#9d9a70)}.weather-peace{background:linear-gradient(180deg,#94baa0,#ded09a)}.weather-winterstorm{background:linear-gradient(180deg,#dce6e8,#9eb4c1)}.weather-suddenwealth{background:linear-gradient(180deg,#86aa72,#d3b95f)}.weather-drought-card{box-shadow:inset 0 0 0 2px #c69a52}.weather-plague-card{box-shadow:inset 0 0 0 2px #738c44}.weather-peace-card{box-shadow:inset 0 0 0 2px #e6d58d}
 </style>
 <script src="multiplayer-config.js" defer></script>
-<script src="game.js?v=20261104-4" defer></script>
+<script src="game.js?v=20261104-13" defer></script>
 </head>
 <body>
 <main class="game-shell">
@@ -48,6 +48,7 @@
 </dialog>
 <dialog class="rules-dialog" id="rules-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close rules">×</button></form><span class="eyebrow">FIELD MANUAL</span><h2>How to play</h2><p>Reduce the rival commander from 30 health to 0 to claim the crown.</p><div class="rule-row"><span>01</span><p><b>Gather supplies.</b> Once per turn, choose food, wood, or stone to gather 2. Your stores carry over.</p></div><div class="rule-row"><span>02</span><p><b>Play your hand.</b> Creatures cost food, spells cost stone, and structures cost wood. Play as many affordable cards as you can.</p></div><div class="rule-row"><span>03</span><p><b>Hold the field.</b> Creatures attack once each turn. Structures have health but cannot attack; their passive effects work while they stand. Trade Posts grant 1 of each resource per friendly creature each turn.</p></div><div class="rule-row"><span>04</span><p><b>Break defenses.</b> Click a ready creature, then a rival creature, structure, or commander. Defense reduces damage; every strike deals at least 1.</p></div><p class="rule-note">Each empire's 100-card deck includes 15 history-inspired special cards. Resource cards grant 2 supplies when drawn. An empty deck deals increasing fatigue damage instead of drawing. In a campaign, each consecutive dynasty victory raises the next rival's health and supplies; a defeat resets the streak.</p></dialog>
 <dialog class="rules-dialog tutorial-dialog" id="tutorial-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close tutorial">×</button></form><span class="eyebrow">DYNASTY GUIDE</span><h2>How to play each deck</h2><div class="tutorial-tabs" id="tutorial-tabs"></div><div class="tutorial-content" id="tutorial-content" aria-live="polite"></div></dialog>
+<dialog class="card-inspect-dialog" id="card-inspect-dialog" aria-labelledby="card-inspect-name"><form method="dialog"><button class="dialog-close" aria-label="Close card details">×</button></form><div class="card-inspect-art" id="card-inspect-art"></div><div class="card-inspect-copy"><span class="eyebrow" id="card-inspect-kind">CARD</span><h2 id="card-inspect-name"></h2><p id="card-inspect-description"></p><div id="card-inspect-details"></div><section class="card-history"><span class="eyebrow">HISTORICAL NOTES</span><ul id="card-inspect-history"></ul></section><button class="play-inspected-card" id="play-inspected-card" type="button">PLAY CARD <span>→</span></button></div></dialog>
 <dialog class="result-dialog" id="result-dialog"><span class="eyebrow">THE CHRONICLE IS WRITTEN</span><div class="result-emblem" id="result-emblem">✦</div><h2 id="result-title">Victory</h2><p id="result-copy"></p><button class="play-again" id="play-again" type="button">CHOOSE ANOTHER EMPIRE <span>→</span></button></dialog>
 </main>
 </body>

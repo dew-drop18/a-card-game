@@ -94,8 +94,68 @@ const dynastySpecials = {
 const specialSpellEffects = ['harvest', 'damage', 'heal', 'rally', 'ward'];
 const specialStructureEffects = ['resources', 'training', 'healing', 'resources', 'healing'];
 const specialHarvestResources = { british: 'wood', mongol: 'food', russian: 'wood', qing: 'food', spanish: 'stone', french: 'wood' };
+const dynastyHistory = {
+  british: [
+    'Britain became a global maritime power through naval bases, ocean trade, and long-distance armies.',
+    'Longbow companies helped English armies win famous victories during the Hundred Years War.',
+    'The Royal Navy’s battles helped protect trade routes between Britain and its worldwide empire.',
+    'Civilian hospitals and volunteer networks transformed military care during the nineteenth century.',
+    'Muskets, disciplined drilling, and close formation shaped European armies of the Georgian and Victorian eras.',
+  ],
+  mongol: [
+    'The Mongol Empire grew into the largest connected land empire in history by using speed and coordination.',
+    'Mounted couriers traveled relays across the steppe and carried orders across vast distances.',
+    'Composite bows gave Mongol mounted archers exceptional range while riding at speed.',
+    'Mongol armies combined cavalry scouting, siege engineers, and carefully planned supply routes.',
+    'The ordu was both a military camp and a household organization for elite steppe commanders.',
+  ],
+  russian: [
+    'Russia’s military and trade routes developed around forests, rivers, and the long northern winter.',
+    'Bear hunting and fur trade both supplied food and income across Siberian frontier communities.',
+    'Cossack riders were skilled frontier soldiers serving communities along Russia’s southern borders.',
+    'Imperial Russian armies relied heavily on mass infantry formations throughout the nineteenth century.',
+    'Russian forts guarded rivers and trade roads as the state expanded toward Siberia and the Pacific.',
+  ],
+  qing: [
+    'The Qing dynasty united many regions and expanded the borders of the Chinese empire.',
+    'Banner armies organized Manchu soldiers and families around military household units.',
+    'The Grand Canal carried grain and supplies between northern and southern China.',
+    'Jade was valued as a symbol of virtue and used in court art, ritual objects, and gifts.',
+    'Qing forts and river fleets defended the coast from piracy and foreign fleets.',
+  ],
+  spanish: [
+    'Spain’s Atlantic fleets linked Europe, the Americas, and the wider global trade network.',
+    'Crossbowmen remained important in Iberian warfare before firearms became dominant.',
+    'The wind-powered galleon carried soldiers, cargo, and artillery across the Atlantic.',
+    'Silver mined in the Americas transformed commerce but also fueled inflation in Europe.',
+    'Spanish mountain roads and fortified towns shaped the Reconquista and later colonial defenses.',
+  ],
+  french: [
+    'France built river forts and trading posts across the Saint Lawrence and Great Lakes regions.',
+    'Voyageurs paddled large canoes while transporting trade goods through New France.',
+    'Fortifications used stone, earthworks, and careful sight lines to control important river crossings.',
+    'French colonial hospitals combined clerical care, nursing orders, and military medicine.',
+    'The fur trade connected Indigenous nations and European merchants in complex alliances.',
+  ],
+};
 
 function makeCost(food, wood, stone) { return { food, wood, stone }; }
+
+function historicalTidbits(empire, details, serial) {
+  const dynastyFacts = dynastyHistory[empire.id];
+  const roleFacts = {
+    Creature: `${details.name} represents the soldiers, mounted forces, animals, or champions that a ${empire.name} commander could field.`,
+    Spell: `${details.name} takes its inspiration from the supplies, orders, or battles that shaped the history of the ${empire.name}.`,
+    Structure: `${details.name} echoes a real fort, depot, court, harbor, or defensive work associated with the ${empire.name}.`,
+    Resource: `${details.name} recalls the food, timber, and stone that powered campaigns throughout the age of ${empire.name}.`,
+  };
+  const start = serial % dynastyFacts.length;
+  const count = 2 + serial % 4;
+  const facts = [];
+  for (let index = 0; index < count - 1; index++) facts.push(dynastyFacts[(start + index) % dynastyFacts.length]);
+  facts.push(roleFacts[details.kind]);
+  return facts;
+}
 
 function makeCard(empire, details, serial) {
   const cost = details.kind === 'Resource'
@@ -104,7 +164,7 @@ function makeCard(empire, details, serial) {
       resource,
       details.cost[resource] + Number(details.cost[resource] > 0),
     ]));
-  return { ...details, cost, name: details.name, empire, instanceId: `${empire.id}-${details.id}` };
+  return { ...details, cost, name: details.name, empire, instanceId: `${empire.id}-${details.id}`, historicalTidbits: historicalTidbits(empire, details, serial) };
 }
 
 function getUnitLoadout(unit, empire, tier) {
@@ -280,6 +340,7 @@ const difficulties = [
 ];
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
 const MAX_FIELD_CARDS = 5;
+let inspectedCard = null;
 const arena = { canvas: $('#pixel-battlefield'), context: null, combat: null, rendering: false };
 let onlineSelection = false;
 let onlineConnection = null;
@@ -1477,15 +1538,43 @@ function makePixelArt(card, compact = false) {
   return wrapper;
 }
 
-function makeHandCard(card) {
+function makeCardInspectControl(card) {
+  const inspectButton = document.createElement('span');
+  inspectButton.className = 'card-inspect-button';
+  inspectButton.setAttribute('role', 'button');
+  inspectButton.setAttribute('tabindex', '0');
+  inspectButton.dataset.cardInspectControl = 'true';
+  inspectButton.setAttribute('aria-label', `Enlarge ${card.name}`);
+  inspectButton.title = 'Enlarge card';
+  inspectButton.textContent = 'VIEW';
+  const openInspection = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openCardDetails(card);
+  };
+  inspectButton.addEventListener('pointerdown', (event) => event.stopPropagation());
+  inspectButton.addEventListener('click', openInspection);
+  inspectButton.addEventListener('mousedown', (event) => {
+    event.stopPropagation();
+  });
+  inspectButton.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openInspection(event);
+    }
+  });
+  return inspectButton;
+}
+
+function makeHandCard(card, inspectOnly = false) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `hand-card ${card.kind.toLowerCase()}-card`;
   button.draggable = (card.kind === 'Creature' || card.kind === 'Structure') && window.matchMedia('(pointer: fine)').matches;
   button.style.cssText = factionStyle(card.empire);
-  button.disabled = state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= MAX_FIELD_CARDS && (card.kind === 'Creature' || card.kind === 'Structure');
   button.setAttribute('aria-label', `${card.name}, ${card.kind}. Costs ${resourceNames.filter((resource) => card.cost[resource]).map((resource) => `${card.cost[resource]} ${resource}`).join(', ')}. ${card.text}${card.kind === 'Creature' ? ` Attack ${card.attack}, health ${card.health}, defense ${card.defense}.` : card.kind === 'Structure' ? ` Health ${card.health}. No attack.` : ''}`);
   button.innerHTML = `<span class="hand-card-top"><span class="hand-symbol">${card.glyph}</span><span class="choice-number">${card.empire.sigil}</span></span>`;
+  if (!inspectOnly) button.append(makeCardInspectControl(card));
   button.append(makePixelArt(card), document.createRange().createContextualFragment(`<span class="hand-name">${card.name}</span><span class="hand-kind">${card.special ? 'EMPIRE SPECIAL · ' : ''}${card.kind}</span>${card.weaponName ? `<span class="hand-weapon">⚔ ${card.weaponName}${card.mounted ? ' · Mounted' : ''}</span><span class="hand-feature">${card.species ? `${card.species} · ${card.armor}` : `${card.armor} · ${card.headwear}`}</span>` : ''}<span class="hand-cost">${renderCost(card.cost)}</span><span class="hand-description">${card.text}</span>${card.kind === 'Creature' ? `<span class="hand-stats"><span>⚔ ${card.attack}</span><span>♥ ${card.health}</span><span>⬡ ${card.defense}</span></span>` : card.kind === 'Structure' ? `<span class="hand-stats"><span>♥ ${card.health}</span><span>NO ATTACK</span></span>` : ''}`));
   button.addEventListener('dragstart', (event) => {
     if ((card.kind !== 'Creature' && card.kind !== 'Structure') || state.turn !== 'player' || state.busy || !canAfford(state.player, card) || state.player.board.length >= MAX_FIELD_CARDS) {
@@ -1495,8 +1584,34 @@ function makeHandCard(card) {
     event.dataTransfer.setData('text/plain', card.instanceId);
     event.dataTransfer.effectAllowed = 'move';
   });
-  button.addEventListener('click', () => playCard(card, state.player));
+  if (!inspectOnly) {
+    button.addEventListener('click', (event) => {
+      if (event.target.closest('.card-inspect-button')) return;
+      openCardDetails(card);
+    });
+  }
   return button;
+}
+
+function openCardDetails(card) {
+  inspectedCard = card;
+  $('#card-inspect-name').textContent = card.name;
+  $('#card-inspect-kind').textContent = `${card.special ? 'EMPIRE SPECIAL · ' : ''}${card.kind.toUpperCase()}`;
+  $('#card-inspect-description').textContent = card.text;
+  const history = Array.isArray(card.historicalTidbits) ? card.historicalTidbits : ['This card carries the history and traditions of its dynasty onto the battlefield.'];
+  $('#card-inspect-history').innerHTML = history.map((fact) => `<li>${fact}</li>`).join('');
+  $('#card-inspect-details').innerHTML = [
+    card.weaponName ? `<b>${card.weaponName}${card.mounted ? ' · Mounted' : ''}</b>` : '',
+    card.species ? `<span>${card.species} · ${card.armor}</span>` : card.armor ? `<span>${card.armor} · ${card.headwear}</span>` : '',
+    renderCost(card.cost) ? `<span>Cost: ${renderCost(card.cost)}</span>` : '<span>Cost: None</span>',
+    card.kind === 'Creature' ? `<span>Attack ${card.attack} · Health ${card.health} · Defense ${card.defense}</span>` : '',
+    card.kind === 'Structure' ? `<span>Health ${card.health} · No attack</span>` : '',
+  ].filter(Boolean).join('');
+  $('#card-inspect-art').replaceChildren(makeHandCard(card, true));
+  const fieldSpace = !['Creature', 'Structure'].includes(card.kind) || state.player.board.length < MAX_FIELD_CARDS;
+  const canPlay = state.turn === 'player' && !state.busy && !state.ended && canAfford(state.player, card) && fieldSpace;
+  $('#play-inspected-card').disabled = !canPlay;
+  $('#card-inspect-dialog').showModal();
 }
 
 function makeBoardCard(creature, owner) {
@@ -1514,8 +1629,11 @@ function makeBoardCard(creature, owner) {
   button.innerHTML = `<span class="board-top"><span class="card-sigil">${creature.glyph}</span></span><span class="board-type">${creature.special ? 'EMPIRE SPECIAL · ' : ''}${isStructure ? 'STRUCTURE' : 'CREATURE'}</span>`;
   const description = isStructure ? creature.text : creature.species ? `${creature.species} · ${creature.armor}` : `${creature.weaponName} · ${creature.headwear}`;
   const stats = isStructure ? `<span>♥ ${health}</span><span>NO ATTACK</span>` : `<span>⚔ ${attack}</span><span>♥ ${health}</span><span>⬡ ${creature.defense}</span>`;
-  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${description}</span><span class="board-stats">${stats}</span>`));
-  button.addEventListener('click', () => handleCreatureClick(creature, owner));
+  button.append(makePixelArt(creature, true), document.createRange().createContextualFragment(`<span class="board-name">${creature.name}</span><span class="board-weapon">${description}</span><span class="board-stats">${stats}</span>`), makeCardInspectControl(creature));
+  button.addEventListener('click', (event) => {
+    if (event.target.closest('.card-inspect-button')) return;
+    handleCreatureClick(creature, owner);
+  });
   return button;
 }
 
@@ -1930,6 +2048,11 @@ $('#difficulty-back').addEventListener('click', () => {
   screens.intro.hidden = false;
 });
 $('#end-turn').addEventListener('click', endPlayerTurn);
+$('#play-inspected-card').addEventListener('click', () => {
+  if (!inspectedCard) return;
+  $('#card-inspect-dialog').close();
+  playCard(inspectedCard, state.player);
+});
 $('.harvest-row').addEventListener('click', (event) => {
   const button = event.target.closest('[data-resource]');
   if (button) gatherForPlayer(button.dataset.resource);

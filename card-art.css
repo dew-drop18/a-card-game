@@ -480,6 +480,80 @@ button,
 .hand-card.structure-card {
   background: linear-gradient(145deg, #fff9e9 0%, #e5efdf 56%, color-mix(in srgb, var(--faction) 16%, #f6f0e2) 100%);
 }
+.card-inspect-dialog {
+  width: min(760px, calc(100% - 32px));
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 28px;
+  padding: 28px;
+}
+.card-inspect-dialog[open] { display: grid; }
+.card-inspect-dialog .dialog-close { position: absolute; top: 14px; right: 14px; }
+.card-inspect-art .hand-card {
+  width: 328px;
+  min-width: 328px;
+  height: 488px;
+  transform: none;
+  margin: 0;
+}
+.card-inspect-art .hand-card .hand-name { font-size: 25px; }
+.card-inspect-art .hand-card .hand-description { font-size: 16px; }
+.card-inspect-art .hand-card .pixel-art-frame { height: 100px; flex-basis: 100px; }
+.card-inspect-copy { align-self: center; min-width: 0; }
+.card-inspect-copy h2 { margin: 8px 0 12px; }
+.card-inspect-copy p { line-height: 1.55; }
+#card-inspect-details { display: grid; gap: 8px; margin: 18px 0; color: #5f5949; }
+.card-history { margin-bottom: 18px; }
+.card-history ul { display: grid; gap: 8px; margin: 10px 0 0; padding-left: 18px; line-height: 1.45; }
+.card-history li::marker { color: #a94b38; }
+.hand-card .card-inspect-button,
+.board-card .card-inspect-button {
+  flex: none;
+  align-self: auto;
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #28291f55;
+  border-radius: 50%;
+  background: #fff8e8;
+  color: #28291f;
+  box-shadow: 0 2px 6px #28291f33;
+  font: 700 16px/1 sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hand-card .card-inspect-button,
+.board-card .card-inspect-button {
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  isolation: isolate;
+}
+.board-card .card-inspect-button {
+  top: 5px;
+  right: 5px;
+  width: auto;
+  min-width: 42px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font: 700 7px/1 'DM Mono', monospace;
+  letter-spacing: .04em;
+}
+.card-inspect-button:hover,
+.card-inspect-button:focus-visible {
+  background: #28291f;
+  color: #fff8e8;
+  outline: none;
+}
+.hand-card,
+.board-card { position: relative; }
+.play-inspected-card { min-height: 44px; padding: 0 18px; border: 0; background: #28291f; color: #fff8e8; cursor: pointer; }
+.play-inspected-card:disabled { opacity: .45; cursor: not-allowed; }
 .hand-card.creature-card,
 .board-card.creature-card {
   border: 3px solid #6f8f4d;
@@ -572,6 +646,16 @@ button,
   .matchmaking-spinner { animation-duration: 2s; }
 }
 @media (max-width: 600px) {
+  .card-inspect-dialog[open] {
+    grid-template-columns: 1fr;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+  .card-inspect-art .hand-card {
+    width: min(328px, calc(100vw - 88px));
+    min-width: 0;
+    height: 488px;
+  }
   .matchmaking-dialog { padding: 27px 20px; }
   .difficulty-screen { padding: 30px 0; }
   .difficulty-heading { margin-bottom: 22px; }

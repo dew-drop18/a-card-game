@@ -177,7 +177,7 @@ function buildEmpireDeck(empire) {
     for (let index = 0; index < deckProfiles[empire.id].supplies[resource]; index++) {
       deck.push(makeCard(empire, {
         id: `supply-${resource}-${index}`,
-        name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply ${String(index + 1).padStart(2, '0')}`,
+        name: `${resource[0].toUpperCase()}${resource.slice(1)} Supply`,
         kind: 'Resource', cost: makeCost(0, 0, 0), glyph: resourceMarks[resource],
         resource, amount: 2, effect: 'harvest', text: `Gain 2 ${resource}.`,
       }, deck.length + 1));
@@ -203,7 +203,7 @@ function buildEmpireDeck(empire) {
       if (!template) break;
       const copy = makeCard(empire, {
         ...template, id: `${template.id}-copy-${regular.length + 1}`,
-        name: `${template.name} II`,
+        name: template.name,
       }, deck.length + 1);
       deck.push(copy);
       regular.push(copy);

@@ -339,6 +339,8 @@ const difficulties = [
   { id: 'true-battlegrounds', name: 'True Battlegrounds', enemyHealth: 42, aiTargetChance: .85, color: '#a94b38', summary: 'Rivals begin with 42 health and target threats relentlessly.' },
 ];
 const state = { started: false, ended: false, busy: false, turn: 'player', round: 0, selectedAttacker: null, gathered: false, selectedEmpire: null, campaign: null, player: null, enemy: null, weather: { id: 'average', name: 'Average', description: 'Normal conditions', remaining: 0 } };
+let onlineSelection = false;
+let onlineConnection = null;
 const MAX_FIELD_CARDS = 5;
 let inspectedCard = null;
 const battleMusic = new Audio('assets/marching-to-victory.mp3');
@@ -362,6 +364,52 @@ function stopBattleMusic() {
   battleMusic.currentTime = 0;
 }
 
+const menuWarTheme = {
+  timer: null,
+  step: 0,
+};
+
+function playMenuWarNote(frequency, duration, volume, delay = 0, type = 'triangle') {
+  const context = getHoverAudioContext();
+  if (!context || !menuWarTheme.timer) return;
+  const start = context.currentTime + delay;
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const filter = context.createBiquadFilter();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  filter.type = 'lowpass';
+  filter.frequency.value = 1100;
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(filter).connect(gain).connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function scheduleMenuWarMarch() {
+  if (!menuWarTheme.timer) return;
+  const melody = [146.83, 146.83, 174.61, 196, 174.61, 146.83, 123.47, 123.47, 146.83, 196, 174.61, 146.83];
+  const note = melody[menuWarTheme.step % melody.length];
+  playMenuWarNote(note, 0.38, 0.014);
+  if (menuWarTheme.step % 2 === 0) playMenuWarNote(note / 2, 0.32, 0.018, 0.02, 'sine');
+  if (menuWarTheme.step % 4 === 0) playMenuWarNote(55, 0.16, 0.025, 0.03, 'sine');
+  menuWarTheme.step += 1;
+}
+
+function startMenuWarTheme() {
+  if (menuWarTheme.timer || state.started) return;
+  getHoverAudioContext()?.resume().catch(() => {});
+  menuWarTheme.timer = window.setInterval(scheduleMenuWarMarch, 480);
+  scheduleMenuWarMarch();
+}
+
+function stopMenuWarTheme() {
+  window.clearInterval(menuWarTheme.timer);
+  menuWarTheme.timer = null;
+}
+
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && state.started && !state.ended && battleMusic.paused) {
     resumeBattleMusic();
@@ -380,6 +428,12 @@ function getHoverAudioContext() {
   }
   if (hoverAudioContext.state === 'suspended') hoverAudioContext.resume().catch(() => {});
   return hoverAudioContext;
+}
+
+function unlockHoverAudio() {
+  const context = getHoverAudioContext();
+  if (context?.state === 'suspended') context.resume().catch(() => {});
+  if (!state.started) startMenuWarTheme();
 }
 
 function playHoverTone(frequency, duration = 0.09, volume = 0.018, delay = 0) {
@@ -1060,6 +1114,7 @@ function renderOnlineState(match) {
   screens.difficulty.hidden = true;
   screens.battle.hidden = false;
   if ($('#matchmaking-dialog').open) $('#matchmaking-dialog').close();
+  stopMenuWarTheme();
   startBattleMusic();
   startBattlefieldAnimation();
   updateHeader();
@@ -1138,6 +1193,7 @@ function startCampaignBattle() {
   drawUntilHandSize(state.enemy);
   screens.difficulty.hidden = true;
   screens.battle.hidden = false;
+  stopMenuWarTheme();
   startBattleMusic();
   startBattlefieldAnimation();
   if ($('#result-dialog').open) $('#result-dialog').close();
@@ -2121,6 +2177,7 @@ async function runAiTurn() {
 
 function returnToSelection() {
   stopBattleMusic();
+  startMenuWarTheme();
   if (onlineConnection?.queue) onlineConnection.queue.close();
   if (onlineConnection?.room) onlineConnection.room.close();
   onlineConnection = null;
@@ -2198,6 +2255,7 @@ $('#matchmaking-dialog').addEventListener('cancel', (event) => {
 $('#difficulty-back').addEventListener('click', () => {
   screens.difficulty.hidden = true;
   screens.intro.hidden = false;
+  startMenuWarTheme();
 });
 $('#end-turn').addEventListener('click', endPlayerTurn);
 $('#play-inspected-card').addEventListener('click', () => {
@@ -2248,6 +2306,7 @@ document.addEventListener('pointerover', (event) => {
   hoveredButton = button;
   playButtonHover(button);
 });
+document.addEventListener('pointerdown', unlockHoverAudio, { passive: true });
 document.addEventListener('pointerout', (event) => {
   const button = event.target.closest('button');
   if (button && (!event.relatedTarget || !button.contains(event.relatedTarget))) {
@@ -2264,6 +2323,8 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('resize', () => {
   if (arena.rendering) window.requestAnimationFrame(drawBattlefield);
 });
+
+startMenuWarTheme();
 
 const savedOnlineMatch = sessionStorage.getItem('empires-online-match');
 if (savedOnlineMatch) {
